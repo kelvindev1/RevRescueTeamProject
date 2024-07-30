@@ -22,7 +22,7 @@ class User(db.Model, SerializerMixin):
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
-    serialize_rules = ('-messages_sent', '-assistance_requests', '-reviews_written', '-notifications', '-locations')
+    serialize_rules = ('-messages_sent',)
 
     # Relationships
     messages_sent = db.relationship('Message', back_populates='sender')
