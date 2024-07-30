@@ -1,0 +1,8 @@
+#  pip install -r requirements.txt
+
+flask
+flask_sqlalchemy
+sqlalchemy_serializer
+flask_restful
+flask_migrate
+flask_cors
