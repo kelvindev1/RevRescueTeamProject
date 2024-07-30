@@ -1,7 +1,7 @@
 from random import randint, choice as rc
 from faker import Faker
 from app import app, db
-from models import User, Mechanic, Message  # Adjusted import according to your models
+from models import User, Mechanic, Message, Review  # Adjusted import according to your models
 from werkzeug.security import generate_password_hash
 import random
 
@@ -21,6 +21,7 @@ with app.app_context():
     db.session.query(User).delete()
     db.session.query(Mechanic).delete()
     db.session.query(Message).delete()
+    db.session.query(Review).delete()
     db.session.commit()
 
     print("Creating Users...")
@@ -91,4 +92,20 @@ with app.app_context():
     db.session.add_all(messages)
     db.session.commit()
 
-    print("Database seeding completed successfully.")
+    print("Creating Reviews...")
+    reviews = []
+    for _ in range(20):
+        rating = randint(1, 5)
+        feedback = fake.text()
+        user_id = rc(users).id  # Random user
+        mechanic_id = rc(mechanics).id  # Random mechanic
+        try:
+            review = Review(rating=rating, feedback=feedback, user_id=user_id, mechanic_id=mechanic_id)
+            reviews.append(review)
+        except Exception as e:
+            print(f"Error creating review: {e}")
+    
+    db.session.add_all(reviews)
+    db.session.commit()
+
+    print("Database seeding complete.")

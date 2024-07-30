@@ -7,7 +7,6 @@ metadata = MetaData(
 )
 
 db = SQLAlchemy(metadata=metadata)
-
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
@@ -26,6 +25,7 @@ class User(db.Model, SerializerMixin):
 
     # Relationships
     messages_sent = db.relationship('Message', back_populates='sender', cascade='all, delete-orphan')
+    reviews_written = db.relationship('Review', back_populates="reviewer")
 
 
 class Mechanic(db.Model, SerializerMixin):
@@ -49,6 +49,7 @@ class Mechanic(db.Model, SerializerMixin):
 
     # Relationships
     messages_received = db.relationship('Message', back_populates='receiver', cascade='all, delete-orphan')
+    reviews_received = db.relationship('Review', back_populates = 'mechanic')
 
 
 class Message(db.Model, SerializerMixin):
@@ -66,3 +67,20 @@ class Message(db.Model, SerializerMixin):
     # Relationships
     sender = db.relationship('User', foreign_keys=[sender_id], back_populates='messages_sent')
     receiver = db.relationship('Mechanic', foreign_keys=[receiver_id], back_populates='messages_received')
+
+
+class Review(db.Model, SerializerMixin):
+    __tablename__ = 'reviews'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rating = db.Column(db.Integer, nullable=False)
+    feedback = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=False)
+
+    serialize_rules = ('-reviewer', '-mechanic')
+
+    # Relationships
+    reviewer = db.relationship('User', foreign_keys=[user_id], back_populates='reviews_written')
+    mechanic = db.relationship('Mechanic', foreign_keys=[mechanic_id], back_populates='reviews_received')
