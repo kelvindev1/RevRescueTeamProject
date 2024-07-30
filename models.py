@@ -25,7 +25,7 @@ class User(db.Model, SerializerMixin):
     serialize_rules = ('-messages_sent',)
 
     # Relationships
-    messages_sent = db.relationship('Message', back_populates='sender')
+    messages_sent = db.relationship('Message', back_populates='sender', cascade='all, delete-orphan')
 
 
 class Mechanic(db.Model, SerializerMixin):
@@ -48,7 +48,7 @@ class Mechanic(db.Model, SerializerMixin):
     serialize_rules = ('-messages_received',)
 
     # Relationships
-    messages_received = db.relationship('Message', back_populates='receiver')
+    messages_received = db.relationship('Message', back_populates='receiver', cascade='all, delete-orphan')
 
 
 class Message(db.Model, SerializerMixin):

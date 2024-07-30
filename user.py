@@ -58,7 +58,7 @@ class Users(Resource):
                 db.session.rollback()
                 return {"message": "Error creating user", "error": str(e)}, 500
 
-user_api.add_resource(Users, '/')
+user_api.add_resource(Users, '/', strict_slashes=False)
     
 
 
