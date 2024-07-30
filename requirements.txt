@@ -7,4 +7,3 @@ flask_restful
 flask_migrate
 flask_cors
 faker
-random
