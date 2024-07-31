@@ -32,7 +32,7 @@ class User(db.Model, SerializerMixin):
     username = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(100), nullable=False, unique=True)
     phone_number = db.Column(db.String(15), nullable=False, unique=True)
-    location = db.Column(db.String(100), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     profile_picture = db.Column(db.String(255))
     car_info = db.Column(db.String(300), nullable=False)
     password = db.Column(db.String(), nullable=False)
@@ -40,10 +40,10 @@ class User(db.Model, SerializerMixin):
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
 
-
     # Relationships
     admin = db.relationship("Admin", back_populates="users")
-
+    reviews_written = db.relationship("Review", back_populates="reviewer")
+    location = db.relationship("Location", back_populates="users")
 
 
 # Mechanic interacts with user through assistance requests
@@ -54,7 +54,7 @@ class Mechanic(db.Model, SerializerMixin):
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False, unique=True)
     phone_number = db.Column(db.String(15), nullable=False, unique=True)
-    location = db.Column(db.String(100), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     profile_picture = db.Column(db.String(255))
     expertise = db.Column(db.String(300), nullable=False)
     rating = db.Column(db.Integer, nullable=False)
@@ -64,6 +64,55 @@ class Mechanic(db.Model, SerializerMixin):
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
 
-
     # Relationships
     admin = db.relationship("Admin", back_populates="mechanics")
+    reviews_received = db.relationship("Review", back_populates="mechanic")
+    location = db.relationship("Location", back_populates="mechanics")
+    services = db.relationship('Service', back_populates='mechanic')
+
+
+class Review(db.Model, SerializerMixin):
+    __tablename__ = 'reviews'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rating = db.Column(db.Integer, nullable=False)
+    feedback = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=False)
+
+    serialize_rules = ('-reviewer', '-mechanic')
+
+    # Relationships
+    reviewer = db.relationship('User', foreign_keys=[user_id], back_populates='reviews_written')
+    mechanic = db.relationship('Mechanic', foreign_keys=[mechanic_id], back_populates='reviews_received')
+
+
+# Service offered by mechanics
+class Service(db.Model, SerializerMixin):
+    __tablename__ = 'services'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(255), nullable=False)
+    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=False)
+
+    serialize_rules = ('-mechanic',)
+
+    # Relationships
+    mechanic = db.relationship('Mechanic', back_populates='services')
+
+
+# Location for users and mechanics
+class Location(db.Model, SerializerMixin):
+    __tablename__ = 'locations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    address = db.Column(db.String(255), nullable=False)
+    
+    serialize_rules = ('-users', '-mechanics')
+
+    # Relationships
+    users = db.relationship('User', back_populates='location')
+    mechanics = db.relationship('Mechanic', back_populates='location')

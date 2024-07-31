@@ -3,11 +3,8 @@ from flask_restful import Api, Resource
 from models import db, User
 from werkzeug.security import generate_password_hash
 
-
 user_bp = Blueprint('user_bp', __name__, url_prefix='/users')
-
 user_api = Api(user_bp)
-
 
 class Users(Resource):
     def get(self):
@@ -15,57 +12,55 @@ class Users(Resource):
         return make_response(users, 200)
     
     def post(self):
-            data = request.get_json()
+        data = request.get_json()
 
-            first_name = data.get('first_name')
-            last_name = data.get('last_name')
-            username = data.get('username')
-            email = data.get('email')
-            phone_number = data.get('phone_number')
-            profilepicture = data.get('profilepicture')
-            car_info = data.get('car_info')
-            password = data.get('password')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        username = data.get('username')
+        email = data.get('email')
+        location = data.get('location')
+        phone_number = data.get('phone_number')
+        profile_picture = data.get('profile_picture')
+        car_info = data.get('car_info')
+        password = data.get('password')
 
-            if not all([first_name, last_name, username, email, phone_number, profilepicture, car_info, password]):
-                return {"message": "Missing required fields"}, 400
-            
-            if User.query.filter_by(username=username).first():
-                return {"message": "Username already exists"}, 400
+        if not all([first_name, last_name, username, email, location, phone_number, profile_picture, car_info, password]):
+            return {"message": "Missing required fields"}, 400
+        
+        if User.query.filter_by(username=username).first():
+            return {"message": "Username already exists"}, 400
 
-            if User.query.filter_by(email=email).first():
-                return {"message": "Email already exists"}, 400
-            
-            if User.query.filter_by(phone_number=phone_number).first():
-                return {"message": "Phone number already exists"}, 400
-            
+        if User.query.filter_by(email=email).first():
+            return {"message": "Email already exists"}, 400
+        
+        if User.query.filter_by(phone_number=phone_number).first():
+            return {"message": "Phone number already exists"}, 400
 
-            hashed_password = generate_password_hash(data['password'])
+        hashed_password = generate_password_hash(password)
 
-            new_user = User(
-                first_name=first_name,
-                last_name=last_name,
-                username=username,
-                email=email,
-                phone_number=phone_number,
-                profilepicture=profilepicture,
-                car_info=car_info,
-                password=hashed_password
-            )
+        new_user = User(
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            email=email,
+            phone_number=phone_number,
+            location=location,
+            profile_picture=profile_picture,
+            car_info=car_info,
+            password=hashed_password
+        )
 
-            try:
-                db.session.add(new_user)
-                db.session.commit()
-                user_dict = new_user.to_dict()
-                response = make_response(user_dict, 201)
-                return response
-            
-            except Exception as e:
-                db.session.rollback()
-                return {"message": "Error creating user", "error": str(e)}, 500
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            user_dict = new_user.to_dict()
+            response = make_response(user_dict, 201)
+            return response
+        except Exception as e:
+            db.session.rollback()
+            return {"message": "Error creating user", "error": str(e)}, 500
 
 user_api.add_resource(Users, '/', strict_slashes=False)
-    
-
 
 class UserById(Resource):
     def get(self, id):
@@ -74,8 +69,6 @@ class UserById(Resource):
         if not user:
             return {"message": "User not found"}, 404
         return user.to_dict(), 200
-    
-
 
     def patch(self, id):
         user = User.query.get(id)
@@ -94,19 +87,19 @@ class UserById(Resource):
             user.email = data['email']
         if 'phone_number' in data:
             user.phone_number = data['phone_number']
-        if 'profilepicture' in data:
-            user.profilepicture = data['profilepicture']
+        if 'location' in data:
+            user.location = data['location']
+        if 'profile_picture' in data:
+            user.profile_picture = data['profile_picture']
         if 'car_info' in data:
             user.car_info = data['car_info']
         
         try:
             db.session.commit()
-            return (user.to_dict()), 200
+            return user.to_dict(), 200
         except Exception as e:
             db.session.rollback()
             return {"message": "Error updating user", "error": str(e)}, 500
-
-
 
     def delete(self, id):
         user = User.query.filter_by(id=id).first()
@@ -118,9 +111,8 @@ class UserById(Resource):
             db.session.delete(user)
             db.session.commit()
             return {}, 204
-        
         except Exception as e:
             db.session.rollback()
             return {"message": "Error deleting user", "error": str(e)}, 500
 
-user_api.add_resource(UserById, '/<int:id>')  
+user_api.add_resource(UserById, '/<int:id>')
