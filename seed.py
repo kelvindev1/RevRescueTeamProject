@@ -1,7 +1,7 @@
 from random import randint, choice
 from faker import Faker
 from app import app, db
-from models import Admin, User, Mechanic, Review
+from models import Admin, User, Mechanic, Review, Service, Location
 
 # Initialize Faker and other data
 fake = Faker()
@@ -18,12 +18,29 @@ vehicle_models = ["Camry", "F-150", "Malibu", "Civic", "X5"]
 # Sample review ratings
 ratings = [1, 2, 3, 4, 5]
 
+# Sample service names and descriptions
+service_names = ["Oil Change", "Brake Inspection", "Engine Repair", "Tire Rotation", "Battery Replacement"]
+service_descriptions = ["Complete oil change service", "Brake inspection and maintenance", "Engine repair and diagnostics", "Tire rotation and alignment", "Battery testing and replacement"]
+
 with app.app_context():
     print("Deleting all records...")
     db.session.query(User).delete()
     db.session.query(Mechanic).delete()
     db.session.query(Admin).delete()
     db.session.query(Review).delete()
+    db.session.query(Service).delete()
+    db.session.query(Location).delete()
+    db.session.commit()
+
+    print("Creating Locations...")
+    locations = []
+    for _ in range(5):  # Create 5 locations
+        address = fake.address()
+        location = Location(
+            address=address
+        )
+        locations.append(location)
+    db.session.add_all(locations)
     db.session.commit()
 
     print("Creating Admins...")
@@ -49,7 +66,7 @@ with app.app_context():
         email = fake.unique.email()
         username = fake.user_name()
         phone_number = fake.unique.phone_number()
-        location = fake.city()
+        location_id = choice([location.id for location in locations])
         profile_picture = choice(image_urls)
         car_info = f"{choice(vehicle_makes)} {choice(vehicle_models)}"
         password = fake.password()
@@ -60,7 +77,7 @@ with app.app_context():
             username=username,
             email=email,
             phone_number=phone_number,
-            location=location,
+            location_id=location_id,
             profile_picture=profile_picture,
             car_info=car_info,
             password=password,
@@ -77,7 +94,7 @@ with app.app_context():
         last_name = fake.last_name()
         email = fake.unique.email()
         phone_number = fake.unique.phone_number()
-        location = fake.city()
+        location_id = choice([location.id for location in locations])
         profile_picture = choice(image_urls)
         expertise = fake.job()
         rating = randint(1, 5)
@@ -89,7 +106,7 @@ with app.app_context():
             last_name=last_name,
             email=email,
             phone_number=phone_number,
-            location=location,
+            location_id=location_id,
             profile_picture=profile_picture,
             expertise=expertise,
             rating=rating,
@@ -99,6 +116,23 @@ with app.app_context():
         )
         mechanics.append(mechanic)
     db.session.add_all(mechanics)
+    db.session.commit()
+
+    print("Creating Services...")
+    services = []
+    for _ in range(20):  # Create 20 services
+        name = choice(service_names)
+        description = choice(service_descriptions)
+        image_url = choice(image_urls)
+        mechanic_id = choice([mechanic.id for mechanic in mechanics])
+        service = Service(
+            name=name,
+            description=description,
+            image_url=image_url,
+            mechanic_id=mechanic_id
+        )
+        services.append(service)
+    db.session.add_all(services)
     db.session.commit()
 
     print("Creating Reviews...")
