@@ -80,3 +80,14 @@ class Payment(db.Model, SerializerMixin):
     commissions = db.relationship("Commission", back_populates="payment", cascade="all, delete-orphan")
 
     serialize_rules = ('-user.payments', '-mechanic.payments', '-commissions.payment')
+
+# Commission belongs to the payment
+class Commission(db.Model, SerializerMixin):
+    _tablename_ = 'commissions'
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payments.id'))
+
+    payment = db.relationship("Payment", back_populates="commissions")
+
+    serialize_rules = ('-payment.commissions',)
