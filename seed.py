@@ -1,7 +1,7 @@
 from random import randint, choice
 from faker import Faker
 from app import app, db
-from models import Admin, User, Mechanic
+from models import Admin, User, Mechanic, Review
 
 # Initialize Faker and other data
 fake = Faker()
@@ -23,6 +23,7 @@ with app.app_context():
     db.session.query(User).delete()
     db.session.query(Mechanic).delete()
     db.session.query(Admin).delete()
+    db.session.query(Review).delete()
     db.session.commit()
 
     print("Creating Admins...")
@@ -98,6 +99,23 @@ with app.app_context():
         )
         mechanics.append(mechanic)
     db.session.add_all(mechanics)
+    db.session.commit()
+
+    print("Creating Reviews...")
+    reviews = []
+    for _ in range(20):  # Create 20 reviews
+        rating = choice(ratings)
+        feedback = fake.text()
+        user_id = choice([user.id for user in users])
+        mechanic_id = choice([mechanic.id for mechanic in mechanics])
+        review = Review(
+            rating=rating,
+            feedback=feedback,
+            user_id=user_id,
+            mechanic_id=mechanic_id
+        )
+        reviews.append(review)
+    db.session.add_all(reviews)
     db.session.commit()
 
     print("Database populated successfully!")
