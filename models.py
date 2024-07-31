@@ -40,10 +40,9 @@ class User(db.Model, SerializerMixin):
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
 
-
     # Relationships
     admin = db.relationship("Admin", back_populates="users")
-
+    reviews_written = db.relationship("Review", back_populates="reviewer")
 
 
 # Mechanic interacts with user through assistance requests
@@ -64,34 +63,23 @@ class Mechanic(db.Model, SerializerMixin):
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
 
+    # Relationships
+    admin = db.relationship("Admin", back_populates="mechanics")
+    reviews_received = db.relationship("Review", back_populates="mechanic")
+
+
+class Review(db.Model, SerializerMixin):
+    __tablename__ = 'reviews'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rating = db.Column(db.Integer, nullable=False)
+    feedback = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=False)
+
+    serialize_rules = ('-reviewer', '-mechanic')
 
     # Relationships
-    sender = db.relationship('User', foreign_keys=[sender_id], back_populates='messages_sent')
-    receiver = db.relationship('Mechanic', foreign_keys=[receiver_id], back_populates='messages_received')
-# Payment belongs to user and mechanic
-class Payment(db.Model, SerializerMixin):
-    _tablename_ = 'payments'
-    id = db.Column(db.Integer, primary_key=True)
-    amount = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(50), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'))
-
-    user = db.relationship("User", back_populates="payments")
-    mechanic = db.relationship("Mechanic", back_populates="payments")
-    commissions = db.relationship("Commission", back_populates="payment", cascade="all, delete-orphan")
-
-    serialize_rules = ('-user.payments', '-mechanic.payments', '-commissions.payment')
-
-# Commission belongs to the payment
-class Commission(db.Model, SerializerMixin):
-    _tablename_ = 'commissions'
-    id = db.Column(db.Integer, primary_key=True)
-    amount = db.Column(db.Float, nullable=False)
-    payment_id = db.Column(db.Integer, db.ForeignKey('payments.id'))
-
-    payment = db.relationship("Payment", back_populates="commissions")
-
-    serialize_rules = ('-payment.commissions',)
-    admin = db.relationship("Admin", back_populates="mechanics")
-
+    reviewer = db.relationship('User', foreign_keys=[user_id], back_populates='reviews_written')
+    mechanic = db.relationship('Mechanic', foreign_keys=[mechanic_id], back_populates='reviews_received')
