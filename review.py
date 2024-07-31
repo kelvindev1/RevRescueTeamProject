@@ -24,7 +24,7 @@ class Reviews(Resource):
 
         new_review = Review(
             rating=data['rating'],
-            comment=data.get('comment', ''),
+            feedback=data.get('comment', ''),
             mechanic_id=data['mechanic_id'],
             user_id=data['user_id']
         )
