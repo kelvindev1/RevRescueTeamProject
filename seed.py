@@ -1,7 +1,7 @@
 from random import randint, choice
 from faker import Faker
 from app import app, db
-from models import Admin, User, Mechanic, Review, Service, Location
+from models import Admin, User, Mechanic, Review, Service, Location, Payment, Commission
 
 # Initialize Faker and other data
 fake = Faker()
@@ -30,6 +30,8 @@ with app.app_context():
     db.session.query(Review).delete()
     db.session.query(Service).delete()
     db.session.query(Location).delete()
+    db.session.query(Payment).delete()
+    db.session.query(Commission).delete()
     db.session.commit()
 
     print("Creating Locations...")
@@ -150,6 +152,40 @@ with app.app_context():
         )
         reviews.append(review)
     db.session.add_all(reviews)
+    db.session.commit()
+
+    # Refresh users and mechanics to avoid DetachedInstanceError
+    users = User.query.all()
+    mechanics = Mechanic.query.all()
+
+    print("Creating Payments...")
+    payments = []
+    for _ in range(20):  # Create 20 payments
+        amount = round(fake.pyfloat(left_digits=3, right_digits=2, positive=True, min_value=20, max_value=200), 2)
+        status = fake.random_element(elements=("Completed", "Pending", "Failed"))
+        user_id = choice([user.id for user in users])
+        mechanic_id = choice([mechanic.id for mechanic in mechanics])
+        payment = Payment(
+            amount=amount,
+            status=status,
+            user_id=user_id,
+            mechanic_id=mechanic_id
+        )
+        payments.append(payment)
+    db.session.add_all(payments)
+    db.session.commit()
+
+    print("Creating Commissions...")
+    commissions = []
+    for _ in range(20):  # Create 20 commissions
+        amount = round(fake.pyfloat(left_digits=2, right_digits=2, positive=True, min_value=5, max_value=50), 2)
+        payment_id = choice([payment.id for payment in payments])
+        commission = Commission(
+            amount=amount,
+            payment_id=payment_id
+        )
+        commissions.append(commission)
+    db.session.add_all(commissions)
     db.session.commit()
 
     print("Database populated successfully!")
