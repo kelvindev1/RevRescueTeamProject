@@ -66,3 +66,17 @@ class Message(db.Model, SerializerMixin):
     # Relationships
     sender = db.relationship('User', foreign_keys=[sender_id], back_populates='messages_sent')
     receiver = db.relationship('Mechanic', foreign_keys=[receiver_id], back_populates='messages_received')
+# Payment belongs to user and mechanic
+class Payment(db.Model, SerializerMixin):
+    _tablename_ = 'payments'
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(50), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'))
+
+    user = db.relationship("User", back_populates="payments")
+    mechanic = db.relationship("Mechanic", back_populates="payments")
+    commissions = db.relationship("Commission", back_populates="payment", cascade="all, delete-orphan")
+
+    serialize_rules = ('-user.payments', '-mechanic.payments', '-commissions.payment')
