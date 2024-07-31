@@ -1,10 +1,9 @@
-from random import randint, choice as rc
+from random import randint, choice
 from faker import Faker
 from app import app, db
-from models import User, Mechanic, Message  # Adjusted import according to your models
-from werkzeug.security import generate_password_hash
-import random
+from models import Admin, User, Mechanic
 
+# Initialize Faker and other data
 fake = Faker()
 image_urls = [
     "https://via.placeholder.com/150",
@@ -16,11 +15,29 @@ image_urls = [
 vehicle_makes = ["Toyota", "Ford", "Chevrolet", "Honda", "BMW"]
 vehicle_models = ["Camry", "F-150", "Malibu", "Civic", "X5"]
 
+# Sample review ratings
+ratings = [1, 2, 3, 4, 5]
+
 with app.app_context():
     print("Deleting all records...")
     db.session.query(User).delete()
     db.session.query(Mechanic).delete()
-    db.session.query(Message).delete()
+    db.session.query(Admin).delete()
+    db.session.commit()
+
+    print("Creating Admins...")
+    admins = []
+    for _ in range(2):  # Create 2 admins
+        username = fake.user_name()
+        email = fake.unique.email()
+        password = fake.password()
+        admin = Admin(
+            username=username,
+            email=email,
+            password=password
+        )
+        admins.append(admin)
+    db.session.add_all(admins)
     db.session.commit()
 
     print("Creating Users...")
@@ -29,23 +46,24 @@ with app.app_context():
         first_name = fake.first_name()
         last_name = fake.last_name()
         email = fake.unique.email()
+        username = fake.user_name()
         phone_number = fake.unique.phone_number()
-        
-        # Select a random image URL for the profile picture
-        profilepicture = rc(image_urls)
-
-        # Generate car info using random choices
-        car_info = f"{rc(vehicle_makes)} {rc(vehicle_models)}"
-        
-        password = generate_password_hash("password123")  # Generate a password hash
+        location = fake.city()
+        profile_picture = choice(image_urls)
+        car_info = f"{choice(vehicle_makes)} {choice(vehicle_models)}"
+        password = fake.password()
+        admin_id = choice([admin.id for admin in admins])  # Assign a random admin
         user = User(
-            first_name=first_name, 
+            first_name=first_name,
             last_name=last_name,
-            email=email, 
+            username=username,
+            email=email,
             phone_number=phone_number,
-            profilepicture=profilepicture, 
+            location=location,
+            profile_picture=profile_picture,
             car_info=car_info,
-            password=password
+            password=password,
+            admin_id=admin_id
         )
         users.append(user)
     db.session.add_all(users)
@@ -56,39 +74,30 @@ with app.app_context():
     for _ in range(5):
         first_name = fake.first_name()
         last_name = fake.last_name()
-        email = fake.unique.email()  # Ensure unique email
+        email = fake.unique.email()
         phone_number = fake.unique.phone_number()
         location = fake.city()
+        profile_picture = choice(image_urls)
         expertise = fake.job()
-        rating = randint(1, 5)  # Rating as an integer between 1 and 5
-        bio = fake.sentence()
-        password = generate_password_hash("password123")  # Generate a password hash
+        rating = randint(1, 5)
+        bio = fake.text()
+        password = fake.password()
+        admin_id = choice([admin.id for admin in admins])  # Assign a random admin
         mechanic = Mechanic(
-            first_name=first_name, 
+            first_name=first_name,
             last_name=last_name,
-            email=email, 
+            email=email,
             phone_number=phone_number,
-            location=location, 
+            location=location,
+            profile_picture=profile_picture,
             expertise=expertise,
-            rating=rating, 
+            rating=rating,
             bio=bio,
-            password=password
+            password=password,
+            admin_id=admin_id
         )
         mechanics.append(mechanic)
-
     db.session.add_all(mechanics)
     db.session.commit()
 
-    print("Creating Messages...")
-    messages = []
-    for _ in range(15):
-        content = fake.sentence()
-        sender_id = rc(users).id  # Random user sender
-        receiver_id = rc(mechanics).id  # Random mechanic receiver
-        message = Message(content=content, sender_id=sender_id, receiver_id=receiver_id)
-        messages.append(message)
-
-    db.session.add_all(messages)
-    db.session.commit()
-
-    print("Database seeding completed successfully.")
+    print("Database populated successfully!")

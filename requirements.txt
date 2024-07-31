@@ -7,3 +7,5 @@ flask_restful
 flask_migrate
 flask_cors
 faker
+flask-bcrypt
+flask_jwt_extended

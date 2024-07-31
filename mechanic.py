@@ -18,6 +18,7 @@ class Mechanics(Resource):
 
             first_name = data.get('first_name')
             last_name = data.get('last_name')
+            username = data.get('username')
             email = data.get('email')
             phone_number = data.get('phone_number')
             location = data.get('location')
@@ -27,9 +28,12 @@ class Mechanics(Resource):
             bio = data.get('bio')
             password = data.get('password')
 
-            if not all([first_name, last_name, email, phone_number, location, profilepicture, expertise, rating, bio, password]):
+            if not all([first_name, last_name, username, email, phone_number, location, profilepicture, expertise, rating, bio, password]):
                 return {"message": "Missing required fields"}, 400
 
+            if Mechanic.query.filter_by(username=username).first():
+                return {"message": "Username already exists"}, 400
+            
             if Mechanic.query.filter_by(email=email).first():
                 return {"message": "Email already exists"}, 400
             
@@ -42,6 +46,7 @@ class Mechanics(Resource):
             new_mechanic = Mechanic(
                 first_name=first_name,
                 last_name=last_name,
+                username = username,
                 email=email,
                 phone_number=phone_number,
                 location = location,
@@ -88,6 +93,8 @@ class MechanicById(Resource):
             mechanic.first_name = data['first_name']
         if 'last_name' in data:
             mechanic.last_name = data['last_name']
+        if 'username' in data:
+            mechanic.username = data['username']
         if 'email' in data:
             mechanic.email = data['email']
         if 'phone_number' in data:

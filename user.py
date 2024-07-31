@@ -19,14 +19,18 @@ class Users(Resource):
 
             first_name = data.get('first_name')
             last_name = data.get('last_name')
+            username = data.get('username')
             email = data.get('email')
             phone_number = data.get('phone_number')
             profilepicture = data.get('profilepicture')
             car_info = data.get('car_info')
             password = data.get('password')
 
-            if not all([first_name, last_name, email, phone_number, profilepicture, car_info, password]):
+            if not all([first_name, last_name, username, email, phone_number, profilepicture, car_info, password]):
                 return {"message": "Missing required fields"}, 400
+            
+            if User.query.filter_by(username=username).first():
+                return {"message": "Username already exists"}, 400
 
             if User.query.filter_by(email=email).first():
                 return {"message": "Email already exists"}, 400
@@ -40,6 +44,7 @@ class Users(Resource):
             new_user = User(
                 first_name=first_name,
                 last_name=last_name,
+                username=username,
                 email=email,
                 phone_number=phone_number,
                 profilepicture=profilepicture,
@@ -83,6 +88,8 @@ class UserById(Resource):
             user.first_name = data['first_name']
         if 'last_name' in data:
             user.last_name = data['last_name']
+        if 'username' in data:
+            user.username = data['username']
         if 'email' in data:
             user.email = data['email']
         if 'phone_number' in data:
