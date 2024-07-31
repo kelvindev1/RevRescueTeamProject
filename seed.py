@@ -1,7 +1,7 @@
 from random import randint, choice
 from faker import Faker
 from app import app, db
-from models import Admin, User, Mechanic, Review, Service, Location, Payment, Commission
+from models import Admin, User, Mechanic, Review, Service, Location, Payment, Commission, AssistanceRequest
 
 # Initialize Faker and other data
 fake = Faker()
@@ -32,15 +32,14 @@ with app.app_context():
     db.session.query(Location).delete()
     db.session.query(Payment).delete()
     db.session.query(Commission).delete()
+    db.session.query(AssistanceRequest).delete()
     db.session.commit()
 
     print("Creating Locations...")
     locations = []
     for _ in range(5):  # Create 5 locations
         address = fake.address()
-        location = Location(
-            address=address
-        )
+        location = Location(address=address)
         locations.append(location)
     db.session.add_all(locations)
     db.session.commit()
@@ -51,11 +50,7 @@ with app.app_context():
         username = fake.user_name()
         email = fake.unique.email()
         password = fake.password()
-        admin = Admin(
-            username=username,
-            email=email,
-            password=password
-        )
+        admin = Admin(username=username, email=email, password=password)
         admins.append(admin)
     db.session.add_all(admins)
     db.session.commit()
@@ -137,6 +132,21 @@ with app.app_context():
     db.session.add_all(services)
     db.session.commit()
 
+    print("Creating Assistance Requests...")
+    assistance_requests = []
+    for _ in range(10):  # Create 10 assistance requests
+        user_id = choice([user.id for user in users])
+        mechanic_id = choice([mechanic.id for mechanic in mechanics])
+        message = fake.text()
+        assistance_request = AssistanceRequest(
+            user_id=user_id,
+            mechanic_id=mechanic_id,
+            message=message
+        )
+        assistance_requests.append(assistance_request)
+    db.session.add_all(assistance_requests)
+    db.session.commit()
+
     print("Creating Reviews...")
     reviews = []
     for _ in range(20):  # Create 20 reviews
@@ -144,19 +154,22 @@ with app.app_context():
         feedback = fake.text()
         user_id = choice([user.id for user in users])
         mechanic_id = choice([mechanic.id for mechanic in mechanics])
+        assistance_request_id = choice([request.id for request in assistance_requests])
         review = Review(
             rating=rating,
             feedback=feedback,
             user_id=user_id,
-            mechanic_id=mechanic_id
+            mechanic_id=mechanic_id,
+            assistance_request_id=assistance_request_id
         )
         reviews.append(review)
     db.session.add_all(reviews)
     db.session.commit()
 
-    # Refresh users and mechanics to avoid DetachedInstanceError
+    # Refresh users, mechanics, and assistance requests to avoid DetachedInstanceError
     users = User.query.all()
     mechanics = Mechanic.query.all()
+    assistance_requests = AssistanceRequest.query.all()
 
     print("Creating Payments...")
     payments = []
@@ -165,11 +178,13 @@ with app.app_context():
         status = fake.random_element(elements=("Completed", "Pending", "Failed"))
         user_id = choice([user.id for user in users])
         mechanic_id = choice([mechanic.id for mechanic in mechanics])
+        assistance_request_id = choice([request.id for request in assistance_requests])
         payment = Payment(
             amount=amount,
             status=status,
             user_id=user_id,
-            mechanic_id=mechanic_id
+            mechanic_id=mechanic_id,
+            assistance_request_id=assistance_request_id
         )
         payments.append(payment)
     db.session.add_all(payments)

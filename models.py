@@ -23,6 +23,8 @@ class Admin(db.Model, SerializerMixin):
     mechanics = db.relationship("Mechanic", back_populates="admin")
 
 
+
+
 # User interacts with mechanic through assistance requests
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
@@ -32,19 +34,25 @@ class User(db.Model, SerializerMixin):
     username = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(100), nullable=False, unique=True)
     phone_number = db.Column(db.String(15), nullable=False, unique=True)
-    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     profile_picture = db.Column(db.String(255))
     car_info = db.Column(db.String(300), nullable=False)
     password = db.Column(db.String(), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
+
+    serialize_rules = ('-admin', '-reviews_written', '-location', '-payments', '-assistance_requests')
 
     # Relationships
     admin = db.relationship("Admin", back_populates="users")
     reviews_written = db.relationship("Review", back_populates="reviewer")
     location = db.relationship("Location", back_populates="users")
     payments = db.relationship("Payment", back_populates="user")
+    assistance_requests = db.relationship("AssistanceRequest", back_populates="user") 
+
+
+
 
 
 # Mechanic interacts with user through assistance requests
@@ -55,7 +63,6 @@ class Mechanic(db.Model, SerializerMixin):
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=False, unique=True)
     phone_number = db.Column(db.String(15), nullable=False, unique=True)
-    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     profile_picture = db.Column(db.String(255))
     expertise = db.Column(db.String(300), nullable=False)
     rating = db.Column(db.Integer, nullable=False)
@@ -63,7 +70,10 @@ class Mechanic(db.Model, SerializerMixin):
     password = db.Column(db.String(), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
+
+    serialize_rules = ('-admin', '-reviews_received', '-location', '-services', '-payments', '-assistance_requests')
 
     # Relationships
     admin = db.relationship("Admin", back_populates="mechanics")
@@ -71,6 +81,9 @@ class Mechanic(db.Model, SerializerMixin):
     location = db.relationship("Location", back_populates="mechanics")
     services = db.relationship('Service', back_populates='mechanic')
     payments = db.relationship("Payment", back_populates="mechanic")
+    assistance_requests = db.relationship("AssistanceRequest", back_populates="mechanic") 
+
+
 
 
 class Review(db.Model, SerializerMixin):
@@ -82,12 +95,17 @@ class Review(db.Model, SerializerMixin):
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=False)
+    assistance_request_id = db.Column(db.Integer, db.ForeignKey('assistance_requests.id'))
 
-    serialize_rules = ('-reviewer', '-mechanic')
+    serialize_rules = ('-reviewer', '-mechanic', '-assistance_request')
 
     # Relationships
     reviewer = db.relationship('User', foreign_keys=[user_id], back_populates='reviews_written')
     mechanic = db.relationship('Mechanic', foreign_keys=[mechanic_id], back_populates='reviews_received')
+    assistance_request = db.relationship('AssistanceRequest', back_populates='reviews')
+
+
+
 
 
 # Service offered by mechanics
@@ -106,6 +124,8 @@ class Service(db.Model, SerializerMixin):
     mechanic = db.relationship('Mechanic', back_populates='services')
 
 
+
+
 # Location for users and mechanics
 class Location(db.Model, SerializerMixin):
     __tablename__ = 'locations'
@@ -120,6 +140,9 @@ class Location(db.Model, SerializerMixin):
     mechanics = db.relationship('Mechanic', back_populates='location')
 
 
+
+
+
 # Payment belongs to user and mechanic
 class Payment(db.Model, SerializerMixin):
     __tablename__ = 'payments'
@@ -128,13 +151,17 @@ class Payment(db.Model, SerializerMixin):
     status = db.Column(db.String(50), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'))
+    assistance_request_id = db.Column(db.Integer, db.ForeignKey('assistance_requests.id'))
 
-    serialize_rules = ('-user', '-mechanic', '-commissions')
+    serialize_rules = ('-user', '-mechanic', '-assistance_request', '-commissions')
 
     # Relationships
     user = db.relationship("User", back_populates="payments")
     mechanic = db.relationship("Mechanic", back_populates="payments")
+    assistance_request = db.relationship("AssistanceRequest", back_populates="payments")
     commissions = db.relationship("Commission", back_populates="payment", cascade="all, delete-orphan")
+
+
 
 
 # Commission belongs to the payment
@@ -148,3 +175,25 @@ class Commission(db.Model, SerializerMixin):
 
     # Relationships
     payment = db.relationship("Payment", back_populates="commissions")
+
+
+
+
+# Assistance Request table for user-mechanic interaction
+class AssistanceRequest(db.Model, SerializerMixin):
+    __tablename__ = 'assistance_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    request_date = db.Column(db.DateTime, default=db.func.current_timestamp())
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    resolved = db.Column(db.Boolean, default=False)
+
+    serialize_rules = ('-user', '-mechanic', '-payments', '-reviews')
+
+    # Relationships
+    user = db.relationship('User', back_populates='assistance_requests')
+    mechanic = db.relationship('Mechanic', back_populates='assistance_requests')
+    payments = db.relationship('Payment', back_populates='assistance_request', cascade='all, delete-orphan')
+    reviews = db.relationship('Review', back_populates='assistance_request')
