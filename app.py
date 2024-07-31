@@ -9,6 +9,8 @@ from admin import admin_bp
 from review import review_bp
 from service import service_bp
 from location import location_bp
+from payment import payment_bp
+from commission import commission_bp
 
 
 app = Flask(__name__)
@@ -30,6 +32,8 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(review_bp)
 app.register_blueprint(service_bp)
 app.register_blueprint(location_bp)
+app.register_blueprint(payment_bp)
+app.register_blueprint(commission_bp)
 
 db.init_app(app)
 api=Api(app)
