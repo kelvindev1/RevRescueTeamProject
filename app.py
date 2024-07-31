@@ -7,6 +7,9 @@ from user import user_bp
 from mechanic import mechanic_bp
 from admin import admin_bp
 from review import review_bp
+from service import service_bp
+from location import location_bp
+
 
 app = Flask(__name__)
 CORS(app)
@@ -25,6 +28,8 @@ app.register_blueprint(user_bp)
 app.register_blueprint(mechanic_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(review_bp)
+app.register_blueprint(service_bp)
+app.register_blueprint(location_bp)
 
 db.init_app(app)
 api=Api(app)
