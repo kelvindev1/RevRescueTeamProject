@@ -5,7 +5,6 @@ from flask_cors import CORS
 from models import db
 from user import user_bp
 from mechanic import mechanic_bp
-from message import message_bp
 
 app = Flask(__name__)
 CORS(app)
@@ -13,13 +12,15 @@ CORS(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# run python then run import uuid then run uuid.uuid4().hex
+app.config['SECRET_KEY'] = '18895d3dd34344728f4365a92988db5a'
+
 
 migrate = Migrate(app, db)
 
 
 app.register_blueprint(user_bp)
 app.register_blueprint(mechanic_bp)
-app.register_blueprint(message_bp)
 
 db.init_app(app)
 api=Api(app)
