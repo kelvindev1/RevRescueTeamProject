@@ -1,7 +1,7 @@
 from random import randint, choice
 from faker import Faker
 from app import app, db
-from models import Admin, User, Mechanic, Review, Service, Location, Payment, Commission, AssistanceRequest
+from models import Admin, User, Mechanic, Review, Service, Location, Payment, Commission, AssistanceRequest, Notification
 
 # Initialize Faker and other data
 fake = Faker()
@@ -33,52 +33,33 @@ with app.app_context():
     db.session.query(Payment).delete()
     db.session.query(Commission).delete()
     db.session.query(AssistanceRequest).delete()
+    db.session.query(Notification).delete()
     db.session.commit()
 
     print("Creating Locations...")
-    locations = []
-    for _ in range(5):  # Create 5 locations
-        address = fake.address()
-        location = Location(address=address)
-        locations.append(location)
+    locations = [Location(address=fake.address()) for _ in range(5)]
     db.session.add_all(locations)
     db.session.commit()
 
     print("Creating Admins...")
-    admins = []
-    for _ in range(2):  # Create 2 admins
-        username = fake.user_name()
-        email = fake.unique.email()
-        password = fake.password()
-        admin = Admin(username=username, email=email, password=password)
-        admins.append(admin)
+    admins = [Admin(username=fake.user_name(), email=fake.unique.email(), password=fake.password()) for _ in range(2)]
     db.session.add_all(admins)
     db.session.commit()
 
     print("Creating Users...")
     users = []
     for _ in range(10):
-        first_name = fake.first_name()
-        last_name = fake.last_name()
-        email = fake.unique.email()
-        username = fake.user_name()
-        phone_number = fake.unique.phone_number()
-        location_id = choice([location.id for location in locations])
-        profile_picture = choice(image_urls)
-        car_info = f"{choice(vehicle_makes)} {choice(vehicle_models)}"
-        password = fake.password()
-        admin_id = choice([admin.id for admin in admins])  # Assign a random admin
         user = User(
-            first_name=first_name,
-            last_name=last_name,
-            username=username,
-            email=email,
-            phone_number=phone_number,
-            location_id=location_id,
-            profile_picture=profile_picture,
-            car_info=car_info,
-            password=password,
-            admin_id=admin_id
+            first_name=fake.first_name(),
+            last_name=fake.last_name(),
+            username=fake.user_name(),
+            email=fake.unique.email(),
+            phone_number=fake.unique.phone_number(),
+            location_id=choice([location.id for location in locations]),
+            profile_picture=choice(image_urls),
+            car_info=f"{choice(vehicle_makes)} {choice(vehicle_models)}",
+            password=fake.password(),
+            admin_id=choice([admin.id for admin in admins])
         )
         users.append(user)
     db.session.add_all(users)
@@ -87,82 +68,59 @@ with app.app_context():
     print("Creating Mechanics...")
     mechanics = []
     for _ in range(5):
-        first_name = fake.first_name()
-        last_name = fake.last_name()
-        email = fake.unique.email()
-        phone_number = fake.unique.phone_number()
-        location_id = choice([location.id for location in locations])
-        profile_picture = choice(image_urls)
-        expertise = fake.job()
-        rating = randint(1, 5)
-        bio = fake.text()
-        password = fake.password()
-        admin_id = choice([admin.id for admin in admins])  # Assign a random admin
         mechanic = Mechanic(
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            phone_number=phone_number,
-            location_id=location_id,
-            profile_picture=profile_picture,
-            expertise=expertise,
-            rating=rating,
-            bio=bio,
-            password=password,
-            admin_id=admin_id
+            first_name=fake.first_name(),
+            last_name=fake.last_name(),
+            email=fake.unique.email(),
+            phone_number=fake.unique.phone_number(),
+            location_id=choice([location.id for location in locations]),
+            profile_picture=choice(image_urls),
+            expertise=fake.job(),
+            rating=randint(1, 5),
+            bio=fake.text(),
+            password=fake.password(),
+            admin_id=choice([admin.id for admin in admins])
         )
         mechanics.append(mechanic)
     db.session.add_all(mechanics)
     db.session.commit()
 
     print("Creating Services...")
-    services = []
-    for _ in range(20):  # Create 20 services
-        name = choice(service_names)
-        description = choice(service_descriptions)
-        image_url = choice(image_urls)
-        mechanic_id = choice([mechanic.id for mechanic in mechanics])
-        service = Service(
-            name=name,
-            description=description,
-            image_url=image_url,
-            mechanic_id=mechanic_id
+    services = [
+        Service(
+            name=choice(service_names),
+            description=choice(service_descriptions),
+            image_url=choice(image_urls),
+            mechanic_id=choice([mechanic.id for mechanic in mechanics])
         )
-        services.append(service)
+        for _ in range(20)
+    ]
     db.session.add_all(services)
     db.session.commit()
 
     print("Creating Assistance Requests...")
-    assistance_requests = []
-    for _ in range(10):  # Create 10 assistance requests
-        user_id = choice([user.id for user in users])
-        mechanic_id = choice([mechanic.id for mechanic in mechanics])
-        message = fake.text()
-        assistance_request = AssistanceRequest(
-            user_id=user_id,
-            mechanic_id=mechanic_id,
-            message=message
+    assistance_requests = [
+        AssistanceRequest(
+            user_id=choice([user.id for user in users]),
+            mechanic_id=choice([mechanic.id for mechanic in mechanics]),
+            message=fake.text()
         )
-        assistance_requests.append(assistance_request)
+        for _ in range(10)
+    ]
     db.session.add_all(assistance_requests)
     db.session.commit()
 
     print("Creating Reviews...")
-    reviews = []
-    for _ in range(20):  # Create 20 reviews
-        rating = choice(ratings)
-        feedback = fake.text()
-        user_id = choice([user.id for user in users])
-        mechanic_id = choice([mechanic.id for mechanic in mechanics])
-        assistance_request_id = choice([request.id for request in assistance_requests])
-        review = Review(
-            rating=rating,
-            feedback=feedback,
-            user_id=user_id,
-            mechanic_id=mechanic_id,
-            assistance_request_id=assistance_request_id
+    reviews = [
+        Review(
+            rating=choice(ratings),
+            feedback=fake.text(),
+            user_id=choice([user.id for user in users]),
+            mechanic_id=choice([mechanic.id for mechanic in mechanics]),
+            assistance_request_id=choice([request.id for request in assistance_requests])
         )
-        reviews.append(review)
+        for _ in range(20)
+    ]
     db.session.add_all(reviews)
     db.session.commit()
 
@@ -172,35 +130,43 @@ with app.app_context():
     assistance_requests = AssistanceRequest.query.all()
 
     print("Creating Payments...")
-    payments = []
-    for _ in range(20):  # Create 20 payments
-        amount = round(fake.pyfloat(left_digits=3, right_digits=2, positive=True, min_value=20, max_value=200), 2)
-        status = fake.random_element(elements=("Completed", "Pending", "Failed"))
-        user_id = choice([user.id for user in users])
-        mechanic_id = choice([mechanic.id for mechanic in mechanics])
-        assistance_request_id = choice([request.id for request in assistance_requests])
-        payment = Payment(
-            amount=amount,
-            status=status,
-            user_id=user_id,
-            mechanic_id=mechanic_id,
-            assistance_request_id=assistance_request_id
+    payments = [
+        Payment(
+            amount=round(fake.pyfloat(left_digits=3, right_digits=2, positive=True, min_value=20, max_value=200), 2),
+            status=fake.random_element(elements=("Completed", "Pending", "Failed")),
+            user_id=choice([user.id for user in users]),
+            mechanic_id=choice([mechanic.id for mechanic in mechanics]),
+            assistance_request_id=choice([request.id for request in assistance_requests])
         )
-        payments.append(payment)
+        for _ in range(20)
+    ]
     db.session.add_all(payments)
     db.session.commit()
 
     print("Creating Commissions...")
-    commissions = []
-    for _ in range(20):  # Create 20 commissions
-        amount = round(fake.pyfloat(left_digits=2, right_digits=2, positive=True, min_value=5, max_value=50), 2)
-        payment_id = choice([payment.id for payment in payments])
-        commission = Commission(
-            amount=amount,
-            payment_id=payment_id
+    commissions = [
+        Commission(
+            amount=round(fake.pyfloat(left_digits=2, right_digits=2, positive=True, min_value=5, max_value=50), 2),
+            payment_id=choice([payment.id for payment in payments])
         )
-        commissions.append(commission)
+        for _ in range(20)
+    ]
     db.session.add_all(commissions)
+    db.session.commit()
+
+    print("Creating Notifications...")
+    notifications = [
+        Notification(
+            sender_user_id=choice([user.id for user in users] + [None]),
+            receiver_user_id=choice([user.id for user in users] + [None]),
+            sender_mechanic_id=choice([mechanic.id for mechanic in mechanics] + [None]),
+            receiver_mechanic_id=choice([mechanic.id for mechanic in mechanics] + [None]),
+            assistance_request_id=choice([request.id for request in assistance_requests]),
+            message=fake.text()
+        )
+        for _ in range(20)
+    ]
+    db.session.add_all(notifications)
     db.session.commit()
 
     print("Database populated successfully!")

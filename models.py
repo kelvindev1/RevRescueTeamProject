@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import MetaData
+from datetime import datetime
 
 metadata = MetaData(
     naming_convention={"fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s"}
@@ -42,14 +43,16 @@ class User(db.Model, SerializerMixin):
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
 
-    serialize_rules = ('-admin', '-reviews_written', '-location', '-payments', '-assistance_requests')
+    serialize_rules = ('-admin', '-reviews_written', '-location', '-payments', '-assistance_requests', '-notifications_sent', '-notifications_received')
 
     # Relationships
     admin = db.relationship("Admin", back_populates="users")
     reviews_written = db.relationship("Review", back_populates="reviewer")
     location = db.relationship("Location", back_populates="users")
     payments = db.relationship("Payment", back_populates="user")
-    assistance_requests = db.relationship("AssistanceRequest", back_populates="user") 
+    assistance_requests = db.relationship("AssistanceRequest", back_populates="user")
+    notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_user_id', back_populates='sender_user')
+    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_user_id', back_populates='receiver_user') 
 
 
 
@@ -73,7 +76,7 @@ class Mechanic(db.Model, SerializerMixin):
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
 
-    serialize_rules = ('-admin', '-reviews_received', '-location', '-services', '-payments', '-assistance_requests')
+    serialize_rules = ('-admin', '-reviews_received', '-location', '-services', '-payments', '-assistance_requests', '-notifications_sent', '-notifications_received')
 
     # Relationships
     admin = db.relationship("Admin", back_populates="mechanics")
@@ -81,7 +84,9 @@ class Mechanic(db.Model, SerializerMixin):
     location = db.relationship("Location", back_populates="mechanics")
     services = db.relationship('Service', back_populates='mechanic')
     payments = db.relationship("Payment", back_populates="mechanic")
-    assistance_requests = db.relationship("AssistanceRequest", back_populates="mechanic") 
+    assistance_requests = db.relationship("AssistanceRequest", back_populates="mechanic")
+    notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_mechanic_id', back_populates='sender_mechanic')
+    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_mechanic_id', back_populates='receiver_mechanic')
 
 
 
@@ -190,10 +195,31 @@ class AssistanceRequest(db.Model, SerializerMixin):
     message = db.Column(db.Text, nullable=False)
     resolved = db.Column(db.Boolean, default=False)
 
-    serialize_rules = ('-user', '-mechanic', '-payments', '-reviews')
+    serialize_rules = ('-user', '-mechanic', '-payments', '-reviews', '-messages')
 
     # Relationships
     user = db.relationship('User', back_populates='assistance_requests')
     mechanic = db.relationship('Mechanic', back_populates='assistance_requests')
     payments = db.relationship('Payment', back_populates='assistance_request', cascade='all, delete-orphan')
     reviews = db.relationship('Review', back_populates='assistance_request')
+    messages = db.relationship('Notification', back_populates='assistance_request')
+
+
+
+class Notification(db.Model, SerializerMixin):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    receiver_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    sender_mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=True)
+    receiver_mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=True)
+    assistance_request_id = db.Column(db.Integer, db.ForeignKey('assistance_requests.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    serialize_rules = ('-assistance_request', '-sender_user', '-receiver_user', '-sender_mechanic', '-receiver_mechanic')
+    assistance_request = db.relationship('AssistanceRequest', back_populates='messages')
+    sender_user = db.relationship('User', foreign_keys=[sender_user_id], back_populates='notifications_sent')
+    receiver_user = db.relationship('User', foreign_keys=[receiver_user_id], back_populates='notifications_received')
+    sender_mechanic = db.relationship('Mechanic', foreign_keys=[sender_mechanic_id], back_populates='notifications_sent')
+    receiver_mechanic = db.relationship('Mechanic', foreign_keys=[receiver_mechanic_id], back_populates='notifications_received')
