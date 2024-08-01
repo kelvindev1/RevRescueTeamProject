@@ -12,6 +12,7 @@ from location import location_bp
 from payment import payment_bp
 from commission import commission_bp
 from assistance_request import assistance_request_bp
+from notification import notification_bp
 
 
 app = Flask(__name__)
@@ -36,6 +37,7 @@ app.register_blueprint(location_bp)
 app.register_blueprint(payment_bp)
 app.register_blueprint(commission_bp)
 app.register_blueprint(assistance_request_bp)
+app.register_blueprint(notification_bp)
 
 db.init_app(app)
 api=Api(app)

@@ -1,8 +1,8 @@
-"""Initial migration.
+"""all models
 
-Revision ID: b09e4c2d099f
+Revision ID: ce8672798f6a
 Revises: 
-Create Date: 2024-07-31 18:26:37.036283
+Create Date: 2024-08-01 12:54:26.710871
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'b09e4c2d099f'
+revision = 'ce8672798f6a'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -37,7 +37,6 @@ def upgrade():
     sa.Column('last_name', sa.String(length=50), nullable=False),
     sa.Column('email', sa.String(length=100), nullable=False),
     sa.Column('phone_number', sa.String(length=15), nullable=False),
-    sa.Column('location_id', sa.Integer(), nullable=True),
     sa.Column('profile_picture', sa.String(length=255), nullable=True),
     sa.Column('expertise', sa.String(length=300), nullable=False),
     sa.Column('rating', sa.Integer(), nullable=False),
@@ -45,6 +44,7 @@ def upgrade():
     sa.Column('password', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('location_id', sa.Integer(), nullable=True),
     sa.Column('admin_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['admin_id'], ['admins.id'], name=op.f('fk_mechanics_admin_id_admins')),
     sa.ForeignKeyConstraint(['location_id'], ['locations.id'], name=op.f('fk_mechanics_location_id_locations')),
@@ -59,12 +59,12 @@ def upgrade():
     sa.Column('username', sa.String(length=50), nullable=False),
     sa.Column('email', sa.String(length=100), nullable=False),
     sa.Column('phone_number', sa.String(length=15), nullable=False),
-    sa.Column('location_id', sa.Integer(), nullable=True),
     sa.Column('profile_picture', sa.String(length=255), nullable=True),
     sa.Column('car_info', sa.String(length=300), nullable=False),
     sa.Column('password', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('location_id', sa.Integer(), nullable=True),
     sa.Column('admin_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['admin_id'], ['admins.id'], name=op.f('fk_users_admin_id_admins')),
     sa.ForeignKeyConstraint(['location_id'], ['locations.id'], name=op.f('fk_users_location_id_locations')),
@@ -73,15 +73,15 @@ def upgrade():
     sa.UniqueConstraint('phone_number'),
     sa.UniqueConstraint('username')
     )
-    op.create_table('reviews',
+    op.create_table('assistance_requests',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('rating', sa.Integer(), nullable=False),
-    sa.Column('feedback', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('request_date', sa.DateTime(), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('mechanic_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['mechanic_id'], ['mechanics.id'], name=op.f('fk_reviews_mechanic_id_mechanics')),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_reviews_user_id_users')),
+    sa.Column('message', sa.Text(), nullable=False),
+    sa.Column('resolved', sa.Boolean(), nullable=True),
+    sa.ForeignKeyConstraint(['mechanic_id'], ['mechanics.id'], name=op.f('fk_assistance_requests_mechanic_id_mechanics')),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_assistance_requests_user_id_users')),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('services',
@@ -93,13 +93,65 @@ def upgrade():
     sa.ForeignKeyConstraint(['mechanic_id'], ['mechanics.id'], name=op.f('fk_services_mechanic_id_mechanics')),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('notifications',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('sender_user_id', sa.Integer(), nullable=True),
+    sa.Column('receiver_user_id', sa.Integer(), nullable=True),
+    sa.Column('sender_mechanic_id', sa.Integer(), nullable=True),
+    sa.Column('receiver_mechanic_id', sa.Integer(), nullable=True),
+    sa.Column('assistance_request_id', sa.Integer(), nullable=False),
+    sa.Column('message', sa.Text(), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['assistance_request_id'], ['assistance_requests.id'], name=op.f('fk_notifications_assistance_request_id_assistance_requests')),
+    sa.ForeignKeyConstraint(['receiver_mechanic_id'], ['mechanics.id'], name=op.f('fk_notifications_receiver_mechanic_id_mechanics')),
+    sa.ForeignKeyConstraint(['receiver_user_id'], ['users.id'], name=op.f('fk_notifications_receiver_user_id_users')),
+    sa.ForeignKeyConstraint(['sender_mechanic_id'], ['mechanics.id'], name=op.f('fk_notifications_sender_mechanic_id_mechanics')),
+    sa.ForeignKeyConstraint(['sender_user_id'], ['users.id'], name=op.f('fk_notifications_sender_user_id_users')),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('payments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('mechanic_id', sa.Integer(), nullable=True),
+    sa.Column('assistance_request_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['assistance_request_id'], ['assistance_requests.id'], name=op.f('fk_payments_assistance_request_id_assistance_requests')),
+    sa.ForeignKeyConstraint(['mechanic_id'], ['mechanics.id'], name=op.f('fk_payments_mechanic_id_mechanics')),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_payments_user_id_users')),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('reviews',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('rating', sa.Integer(), nullable=False),
+    sa.Column('feedback', sa.Text(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('mechanic_id', sa.Integer(), nullable=False),
+    sa.Column('assistance_request_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['assistance_request_id'], ['assistance_requests.id'], name=op.f('fk_reviews_assistance_request_id_assistance_requests')),
+    sa.ForeignKeyConstraint(['mechanic_id'], ['mechanics.id'], name=op.f('fk_reviews_mechanic_id_mechanics')),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_reviews_user_id_users')),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('commissions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('payment_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['payment_id'], ['payments.id'], name=op.f('fk_commissions_payment_id_payments')),
+    sa.PrimaryKeyConstraint('id')
+    )
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('services')
+    op.drop_table('commissions')
     op.drop_table('reviews')
+    op.drop_table('payments')
+    op.drop_table('notifications')
+    op.drop_table('services')
+    op.drop_table('assistance_requests')
     op.drop_table('users')
     op.drop_table('mechanics')
     op.drop_table('locations')
