@@ -102,9 +102,16 @@ class Logout(Resource):
     def get(self):
         jti = get_jwt()["jti"]
         now = datetime.now(timezone.utc)
+
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
         db.session.commit()
-        return jsonify(msg="JWT revoked")
+
+        response = make_response(jsonify(msg="JWT revoked"))
+
+        response.set_cookie("access_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
+        response.set_cookie("refresh_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
+        return response
+    
 user_auth_api.add_resource(Logout,'/logout')
 
 
