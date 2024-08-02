@@ -1,5 +1,5 @@
 from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, make_response
 from flask_restful import Api, Resource, reqparse
 from models import Admin, db, TokenBlocklist
 from flask_bcrypt import Bcrypt
@@ -61,18 +61,22 @@ login_args.add_argument('password')
 class Login(Resource):
     def post(self):
         data = login_args.parse_args()
-
         admin = Admin.query.filter_by(email=data.get('email')).first()
+        
         if not admin:
-            return {"msg": "Admin does not Exist"}
+            return {"msg": "Admin does not Exist"}, 404
         
         if not bcrypt.check_password_hash(admin.password, data.get('password')):
-            return {"msg": "Incorrect Password"}
+            return {"msg": "Incorrect Password"}, 401
         
-        token = create_access_token(identity=admin.id)
+        access_token = create_access_token(identity=admin.id)
         refresh_token = create_refresh_token(identity=admin.id)
 
-        return {"token": token, "refresh_token": refresh_token}
+        response = make_response({"msg": "Login successful"})
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Lax')
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Lax')
+
+        return response
     
     @jwt_required(refresh = True)
     def get(self):
