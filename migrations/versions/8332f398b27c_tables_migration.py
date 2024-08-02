@@ -1,8 +1,8 @@
-"""all models
+"""tables migration
 
-Revision ID: ce8672798f6a
+Revision ID: 8332f398b27c
 Revises: 
-Create Date: 2024-08-01 12:54:26.710871
+Create Date: 2024-08-02 13:15:36.169138
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'ce8672798f6a'
+revision = '8332f398b27c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -24,22 +24,33 @@ def upgrade():
     sa.Column('email', sa.String(length=120), nullable=False),
     sa.Column('password', sa.String(length=120), nullable=False),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email')
+    sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('username')
     )
     op.create_table('locations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('address', sa.String(length=255), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('token_blocklist',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('jti', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('token_blocklist', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_token_blocklist_jti'), ['jti'], unique=False)
+
     op.create_table('mechanics',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('first_name', sa.String(length=50), nullable=False),
     sa.Column('last_name', sa.String(length=50), nullable=False),
+    sa.Column('username', sa.String(length=50), nullable=False),
     sa.Column('email', sa.String(length=100), nullable=False),
     sa.Column('phone_number', sa.String(length=15), nullable=False),
     sa.Column('profile_picture', sa.String(length=255), nullable=True),
     sa.Column('expertise', sa.String(length=300), nullable=False),
-    sa.Column('rating', sa.Integer(), nullable=False),
+    sa.Column('experience_years', sa.Integer(), nullable=False),
     sa.Column('bio', sa.Text(), nullable=True),
     sa.Column('password', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
@@ -50,7 +61,8 @@ def upgrade():
     sa.ForeignKeyConstraint(['location_id'], ['locations.id'], name=op.f('fk_mechanics_location_id_locations')),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
-    sa.UniqueConstraint('phone_number')
+    sa.UniqueConstraint('phone_number'),
+    sa.UniqueConstraint('username')
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -154,6 +166,10 @@ def downgrade():
     op.drop_table('assistance_requests')
     op.drop_table('users')
     op.drop_table('mechanics')
+    with op.batch_alter_table('token_blocklist', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_token_blocklist_jti'))
+
+    op.drop_table('token_blocklist')
     op.drop_table('locations')
     op.drop_table('admins')
     # ### end Alembic commands ###

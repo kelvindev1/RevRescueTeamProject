@@ -13,7 +13,7 @@ db = SQLAlchemy(metadata=metadata)
 class Admin(db.Model, SerializerMixin):
     __tablename__ = 'admins'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
 
@@ -64,11 +64,12 @@ class Mechanic(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
+    username = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(100), nullable=False, unique=True)
     phone_number = db.Column(db.String(15), nullable=False, unique=True)
     profile_picture = db.Column(db.String(255))
     expertise = db.Column(db.String(300), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)
+    experience_years = db.Column(db.Integer, nullable=False)
     bio = db.Column(db.Text)
     password = db.Column(db.String(), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -218,8 +219,19 @@ class Notification(db.Model, SerializerMixin):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     serialize_rules = ('-assistance_request', '-sender_user', '-receiver_user', '-sender_mechanic', '-receiver_mechanic')
+
+
+    #Relationships
     assistance_request = db.relationship('AssistanceRequest', back_populates='messages')
     sender_user = db.relationship('User', foreign_keys=[sender_user_id], back_populates='notifications_sent')
     receiver_user = db.relationship('User', foreign_keys=[receiver_user_id], back_populates='notifications_received')
     sender_mechanic = db.relationship('Mechanic', foreign_keys=[sender_mechanic_id], back_populates='notifications_sent')
     receiver_mechanic = db.relationship('Mechanic', foreign_keys=[receiver_mechanic_id], back_populates='notifications_received')
+
+
+
+class TokenBlocklist(db.Model):
+    __tablename__ = 'token_blocklist'
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False)
