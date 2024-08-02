@@ -15,9 +15,10 @@ from payment import payment_bp
 from commission import commission_bp
 from assistance_request import assistance_request_bp
 from notification import notification_bp
-from user_auth import user_auth_bp
-from admin_auth import admin_auth_bp
-from mechanic_auth import mechanic_auth_bp
+from user_auth import user_auth_bp, jwt, bcrypt
+from admin_auth import admin_auth_bp, jwt, bcrypt
+from mechanic_auth import mechanic_auth_bp, jwt, bcrypt
+from datetime import timedelta, datetime
 
 
 
@@ -29,10 +30,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # run python then run import uuid then run uuid.uuid4().hex
 app.config['SECRET_KEY'] = '18895d3dd34344728f4365a92988db5a'
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=20)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=15)
+app.json.compact = False
 
 
 migrate = Migrate(app, db)
-jwt = JWTManager(app)
 
 
 
@@ -54,8 +57,8 @@ app.register_blueprint(mechanic_auth_bp)
 
 
 db.init_app(app)
-bcrypt = Bcrypt(app)
-jwt = JWTManager(app)
+jwt.init_app(app)
+bcrypt.init_app(app)
 
 
 
