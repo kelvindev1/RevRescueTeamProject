@@ -22,7 +22,7 @@ from mechanic_auth import mechanic_auth_bp
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
