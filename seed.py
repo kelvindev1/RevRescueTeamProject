@@ -71,12 +71,13 @@ with app.app_context():
         mechanic = Mechanic(
             first_name=fake.first_name(),
             last_name=fake.last_name(),
+            username=fake.user_name(),
             email=fake.unique.email(),
             phone_number=fake.unique.phone_number(),
             location_id=choice([location.id for location in locations]),
             profile_picture=choice(image_urls),
             expertise=fake.job(),
-            rating=randint(1, 5),
+            experience_years=randint(1, 10),
             bio=fake.text(),
             password=fake.password(),
             admin_id=choice([admin.id for admin in admins])
