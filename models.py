@@ -15,7 +15,7 @@ class Admin(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+    password = db.Column(db.String(128), nullable=False)
 
     serialize_rules = ('-users.admin', '-mechanics.admin')
 
@@ -37,7 +37,7 @@ class User(db.Model, SerializerMixin):
     phone_number = db.Column(db.String(15), nullable=False, unique=True)
     profile_picture = db.Column(db.String(255))
     car_info = db.Column(db.String(300), nullable=False)
-    password = db.Column(db.String(), nullable=False)
+    password = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
@@ -71,7 +71,7 @@ class Mechanic(db.Model, SerializerMixin):
     expertise = db.Column(db.String(300), nullable=False)
     experience_years = db.Column(db.Integer, nullable=False)
     bio = db.Column(db.Text)
-    password = db.Column(db.String(), nullable=False)
+    password = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))

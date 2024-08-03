@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, make_response
 from flask_restful import Api, Resource, reqparse
 from models import Admin, db, TokenBlocklist
 from flask_bcrypt import Bcrypt
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 admin_auth_bp = Blueprint('admin_auth_bp', __name__,url_prefix='/admin_auth')
 admin_auth_api = Api(admin_auth_bp)
@@ -26,10 +26,10 @@ def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
 
 # signup
 register_args =reqparse.RequestParser()
-register_args.add_argument('username')
-register_args.add_argument('email')
-register_args.add_argument('password')
-register_args.add_argument('password2')
+register_args.add_argument('username', type=str, required=True, help='Username is required')
+register_args.add_argument('email', type=str, required=True, help='Email is required')
+register_args.add_argument('password', type=str, required=True, help='Password is required')
+register_args.add_argument('password2', type=str, required=True, help='Confirm password is required')
 
 class Register(Resource):
     def post(self):
@@ -55,8 +55,8 @@ admin_auth_api.add_resource(Register, '/register')
 
 # login
 login_args = reqparse.RequestParser()
-login_args.add_argument('email')
-login_args.add_argument('password')
+login_args.add_argument('email', type=str, required=True, help='Email is required')
+login_args.add_argument('password', type=str, required=True, help='Password is required')
 
 class Login(Resource):
     def post(self):

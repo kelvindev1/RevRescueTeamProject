@@ -1,9 +1,19 @@
 from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token
-from flask import Blueprint, jsonify, make_response
+from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from models import Mechanic, db, TokenBlocklist
 from flask_bcrypt import Bcrypt
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+import os
+from werkzeug.utils import secure_filename
+
+
+UPLOAD_FOLDER = 'uploads/profile_pictures'
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 mechanic_auth_bp = Blueprint('mechanic_auth_bp', __name__,url_prefix='/mechanic_auth')
 mechanic_auth_api = Api(mechanic_auth_bp)
@@ -26,51 +36,92 @@ def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
 
 
 
-#Register
-register_args =reqparse.RequestParser()
-register_args.add_argument('first_name')
-register_args.add_argument("last_name")
-register_args.add_argument("username")
-register_args.add_argument('email')
-register_args.add_argument("phone_number")
-register_args.add_argument("profile_picture")
-register_args.add_argument("expertise")
-register_args.add_argument("bio")
-register_args.add_argument("experience_years")
-register_args.add_argument('password')
-register_args.add_argument('password2')
+# Register
+register_args = reqparse.RequestParser()
+register_args.add_argument('first_name', type=str, required=True, help='First name is required')
+register_args.add_argument('last_name', type=str, required=True, help='Last name is required')
+register_args.add_argument('username', type=str, required=True, help='Username is required')
+register_args.add_argument('email', type=str, required=True, help='Email is required')
+register_args.add_argument('phone_number', type=str, required=True, help='Phone number is required')
+register_args.add_argument('expertise', type=str, required=True, help='Expertise is required')
+register_args.add_argument('bio', type=str)
+register_args.add_argument('experience_years', type=int, required=True, help='Experience years is required')
+register_args.add_argument('password', type=str, required=True, help='Password is required')
+register_args.add_argument('password2', type=str, required=True, help='Confirm password is required')
 
 
 class Register(Resource):
     def post(self):
-        data = register_args.parse_args()
-        if data.get('password') != data.get('password2'):
-            return {"msg": "Passwords don't Match"}
-        
-        if Mechanic.query.filter_by(username=data.get('username')).first():
-            return {"msg": "Mechanic already exists"}
-        
-        if Mechanic.query.filter_by(email=data.get('email')).first():
-            return {"msg": "Email already registered"}
-        
-        hashed_password = bcrypt.generate_password_hash(data.get('password'))
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
 
-        new_mechanic = Mechanic(first_name=data.get('first_name'), lastname=data.get('last_name'), username=data.get('username'), 
-        email=data.get('email'), phone_number=data.get("phone_number"), profile_picture=data.get("profile_picture"), 
-        expertise=data.get("expertise"), experience_years=data.get("experience_years"), bio=data.get("bio") ,password = hashed_password)
+        if 'profile_picture' not in request.files:
+            return {"msg": "No file part"}, 400
 
-        db.session.add(new_mechanic)
-        db.session.commit()
-        return {'msg': "Mechanic registration Successful"}
+        file = request.files['profile_picture']
+        
+        if file.filename == '':
+            return {"msg": "No selected file"}, 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
+        else:
+            return {"msg": "File type not allowed"}, 400
+        
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        username = request.form.get('username')
+        email = request.form.get('email')
+        phone_number = request.form.get('phone_number')
+        expertise = request.form.get('expertise')
+        bio = request.form.get('bio')
+        experience_years = request.form.get('experience_years')
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
+
+        if password != password2:
+            return {"msg": "Passwords don't match"}, 400
+        
+        if Mechanic.query.filter_by(username=username).first():
+            return {"msg": "Mechanic already exists"}, 400
+        
+        if Mechanic.query.filter_by(email=email).first():
+            return {"msg": "Email already registered"}, 400
+
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        new_mechanic = Mechanic(
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            email=email,
+            phone_number=phone_number,
+            profile_picture=filename,
+            expertise=expertise,
+            experience_years=experience_years,
+            bio=bio,
+            password=hashed_password
+        )
+
+        try:
+            db.session.add(new_mechanic)
+            db.session.commit()
+            return {'msg': "Mechanic registration successful"}, 201
+        except Exception as e:
+            db.session.rollback()
+            return {"msg": "Error creating Mechanic", "error": str(e)}, 500
 
 mechanic_auth_api.add_resource(Register, '/register')
 
 
 
+
 # login
 login_args = reqparse.RequestParser()
-login_args.add_argument('email')
-login_args.add_argument('password')
+login_args.add_argument('email', type=str, required=True, help='Email is required')
+login_args.add_argument('password', type=str, required=True, help='Password is required')
 
 class Login(Resource):
     def post(self):
@@ -100,6 +151,8 @@ class Login(Resource):
 mechanic_auth_api.add_resource(Login, '/login')
 
 
+
+# logout
 class Logout(Resource):
     @jwt_required()
     def get(self):
@@ -116,7 +169,3 @@ class Logout(Resource):
         return response
     
 mechanic_auth_api.add_resource(Logout,'/logout')
-
-
-
-

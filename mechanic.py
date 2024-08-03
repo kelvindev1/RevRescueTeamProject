@@ -2,10 +2,22 @@ from flask import Blueprint, make_response, request
 from flask_restful import Api, Resource
 from models import db, Mechanic
 from werkzeug.security import generate_password_hash
+from werkzeug.utils import secure_filename
+import os
+
+
+UPLOAD_FOLDER = 'uploads/profile_pictures'
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 
 mechanic_bp = Blueprint('mechanic_bp', __name__, url_prefix='/mechanics')
-
 mechanic_api = Api(mechanic_bp)
+
+
 
 class Mechanics(Resource):
     def get(self):
@@ -21,13 +33,28 @@ class Mechanics(Resource):
         email = data.get('email')
         phone_number = data.get('phone_number')
         location = data.get('location')
-        profile_picture = data.get('profile_picture')
         expertise = data.get('expertise')
         experience_years = data.get('experience_years')
         bio = data.get('bio')
         password = data.get('password')
 
-        if not all([first_name, last_name, email, username, phone_number, location, profile_picture, expertise, experience_years, password]):
+
+        if 'profile_picture' not in request.files:
+            return {"message": "Profile picture is required"}, 400
+        
+        file = request.files['profile_picture']
+        if file.filename == '':
+            return {"message": "No selected file"}, 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
+        else:
+            return {"message": "File type not allowed"}, 400
+        
+
+        if not all([first_name, last_name, email, username, phone_number, location, expertise, experience_years, password]):
             return {"message": "Missing required fields"}, 400
         
         if Mechanic.query.filter_by(username=username).first():
@@ -48,7 +75,7 @@ class Mechanics(Resource):
             username=username,
             phone_number=phone_number,
             location=location,
-            profile_picture=profile_picture,
+           profile_picture=filename,
             expertise=expertise,
             experience_years=experience_years,
             bio=bio,
@@ -68,6 +95,8 @@ class Mechanics(Resource):
 
 mechanic_api.add_resource(Mechanics, '/', strict_slashes=False)
 
+
+
 class MechanicById(Resource):
     def get(self, id):
         mechanic = Mechanic.query.filter(Mechanic.id == id).first()
@@ -76,40 +105,68 @@ class MechanicById(Resource):
             return {"message": "Mechanic not found"}, 404
         return mechanic.to_dict(), 200
     
+    # def patch(self, id):
+    #     mechanic = Mechanic.query.get(id)
+    #     if not mechanic:
+    #         return {"message": "Mechanic not found"}, 404
+        
+    #     data = request.get_json()
+        
+    #     if 'first_name' in data:
+    #         mechanic.first_name = data['first_name']
+    #     if 'last_name' in data:
+    #         mechanic.last_name = data['last_name']
+    #     if 'username' in data:
+    #         mechanic.username = data['username']
+    #     if 'email' in data:
+    #         mechanic.email = data['email']
+    #     if 'phone_number' in data:
+    #         mechanic.phone_number = data['phone_number']
+    #     if 'location' in data:
+    #         mechanic.location = data['location']
+    #     if 'profile_picture' in data:
+    #         mechanic.profile_picture = data['profile_picture']
+    #     if 'expertise' in data:
+    #         mechanic.expertise = data['expertise']
+    #     if 'experience_years' in data:
+    #         mechanic.experience_years = data['experience_years']
+    #     if 'bio' in data:
+    #         mechanic.bio = data['bio']
+        
+    #     try:
+    #         db.session.commit()
+    #         return (mechanic.to_dict()), 200
+    #     except Exception as e:
+    #         db.session.rollback()
+    #         return {"message": "Error updating Mechanic", "error": str(e)}, 500
+
+
     def patch(self, id):
         mechanic = Mechanic.query.get(id)
         if not mechanic:
             return {"message": "Mechanic not found"}, 404
-        
-        data = request.get_json()
-        
-        if 'first_name' in data:
-            mechanic.first_name = data['first_name']
-        if 'last_name' in data:
-            mechanic.last_name = data['last_name']
-        if 'username' in data:
-            mechanic.username = data['username']
-        if 'email' in data:
-            mechanic.email = data['email']
-        if 'phone_number' in data:
-            mechanic.phone_number = data['phone_number']
-        if 'location' in data:
-            mechanic.location = data['location']
-        if 'profile_picture' in data:
-            mechanic.profile_picture = data['profile_picture']
-        if 'expertise' in data:
-            mechanic.expertise = data['expertise']
-        if 'experience_years' in data:
-            mechanic.experience_years = data['experience_years']
-        if 'bio' in data:
-            mechanic.bio = data['bio']
+
+        data = request.form.to_dict()
+
+        if 'profile_picture' in request.files:
+            file = request.files['profile_picture']
+            if file.filename != '' and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(UPLOAD_FOLDER, filename)
+                file.save(file_path)
+                data['profile_picture'] = filename
+
+        for key, value in data.items():
+            setattr(mechanic, key, value)
         
         try:
             db.session.commit()
-            return (mechanic.to_dict()), 200
+            return mechanic.to_dict(), 200
         except Exception as e:
             db.session.rollback()
             return {"message": "Error updating Mechanic", "error": str(e)}, 500
+
+
 
     def delete(self, id):
         mechanic = Mechanic.query.filter_by(id=id).first()

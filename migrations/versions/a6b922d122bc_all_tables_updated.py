@@ -1,8 +1,8 @@
-"""updates all tables
+"""all tables updated
 
-Revision ID: b8fae0a221e0
+Revision ID: a6b922d122bc
 Revises: 
-Create Date: 2024-08-03 10:35:51.672734
+Create Date: 2024-08-03 21:19:50.532644
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'b8fae0a221e0'
+revision = 'a6b922d122bc'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,7 +22,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=80), nullable=False),
     sa.Column('email', sa.String(length=120), nullable=False),
-    sa.Column('password', sa.String(length=120), nullable=False),
+    sa.Column('password', sa.String(length=128), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
@@ -52,7 +52,7 @@ def upgrade():
     sa.Column('expertise', sa.String(length=300), nullable=False),
     sa.Column('experience_years', sa.Integer(), nullable=False),
     sa.Column('bio', sa.Text(), nullable=True),
-    sa.Column('password', sa.String(), nullable=False),
+    sa.Column('password', sa.String(length=128), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('location_id', sa.Integer(), nullable=True),
@@ -73,7 +73,7 @@ def upgrade():
     sa.Column('phone_number', sa.String(length=15), nullable=False),
     sa.Column('profile_picture', sa.String(length=255), nullable=True),
     sa.Column('car_info', sa.String(length=300), nullable=False),
-    sa.Column('password', sa.String(), nullable=False),
+    sa.Column('password', sa.String(length=128), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('location_id', sa.Integer(), nullable=True),
