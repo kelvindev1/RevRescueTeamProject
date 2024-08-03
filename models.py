@@ -20,8 +20,8 @@ class Admin(db.Model, SerializerMixin):
     serialize_rules = ('-users.admin', '-mechanics.admin')
 
     # Relationships
-    users = db.relationship("User", back_populates="admin")
-    mechanics = db.relationship("Mechanic", back_populates="admin")
+    users = db.relationship("User", back_populates="admin", cascade="all, delete-orphan")
+    mechanics = db.relationship("Mechanic", back_populates="admin", cascade="all, delete-orphan")
 
 
 
@@ -47,12 +47,12 @@ class User(db.Model, SerializerMixin):
 
     # Relationships
     admin = db.relationship("Admin", back_populates="users")
-    reviews_written = db.relationship("Review", back_populates="reviewer")
+    reviews_written = db.relationship("Review", back_populates="reviewer", cascade="all, delete-orphan")
     location = db.relationship("Location", back_populates="users")
-    payments = db.relationship("Payment", back_populates="user")
-    assistance_requests = db.relationship("AssistanceRequest", back_populates="user")
-    notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_user_id', back_populates='sender_user')
-    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_user_id', back_populates='receiver_user') 
+    payments = db.relationship("Payment", back_populates="user", cascade="all, delete-orphan")
+    assistance_requests = db.relationship("AssistanceRequest", back_populates="user", cascade="all, delete-orphan")
+    notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_user_id', back_populates='sender_user', cascade="all, delete-orphan")
+    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_user_id', back_populates='receiver_user', cascade="all, delete-orphan") 
 
 
 
@@ -85,9 +85,9 @@ class Mechanic(db.Model, SerializerMixin):
     location = db.relationship("Location", back_populates="mechanics")
     services = db.relationship('Service', back_populates='mechanic')
     payments = db.relationship("Payment", back_populates="mechanic")
-    assistance_requests = db.relationship("AssistanceRequest", back_populates="mechanic")
-    notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_mechanic_id', back_populates='sender_mechanic')
-    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_mechanic_id', back_populates='receiver_mechanic')
+    assistance_requests = db.relationship("AssistanceRequest", back_populates="mechanic", cascade="all, delete-orphan")
+    notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_mechanic_id', back_populates='sender_mechanic', cascade="all, delete-orphan")
+    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_mechanic_id', back_populates='receiver_mechanic', cascade="all, delete-orphan")
 
 
 
@@ -142,8 +142,8 @@ class Location(db.Model, SerializerMixin):
     serialize_rules = ('-users', '-mechanics')
 
     # Relationships
-    users = db.relationship('User', back_populates='location')
-    mechanics = db.relationship('Mechanic', back_populates='location')
+    users = db.relationship('User', back_populates='location', cascade="all, delete-orphan")
+    mechanics = db.relationship('Mechanic', back_populates='location', cascade="all, delete-orphan")
 
 
 
@@ -202,8 +202,8 @@ class AssistanceRequest(db.Model, SerializerMixin):
     user = db.relationship('User', back_populates='assistance_requests')
     mechanic = db.relationship('Mechanic', back_populates='assistance_requests')
     payments = db.relationship('Payment', back_populates='assistance_request', cascade='all, delete-orphan')
-    reviews = db.relationship('Review', back_populates='assistance_request')
-    messages = db.relationship('Notification', back_populates='assistance_request')
+    reviews = db.relationship('Review', back_populates='assistance_request', cascade="all, delete-orphan")
+    messages = db.relationship('Notification', back_populates='assistance_request', cascade="all, delete-orphan")
 
 
 
