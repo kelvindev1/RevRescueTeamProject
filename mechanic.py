@@ -17,18 +17,22 @@ class Mechanics(Resource):
 
         first_name = data.get('first_name')
         last_name = data.get('last_name')
+        username= data.get('username')
         email = data.get('email')
         phone_number = data.get('phone_number')
         location = data.get('location')
         profile_picture = data.get('profile_picture')
         expertise = data.get('expertise')
-        rating = data.get('rating')
+        experience_years = data.get('experience_years')
         bio = data.get('bio')
         password = data.get('password')
 
-        if not all([first_name, last_name, email, phone_number, location, profile_picture, expertise, rating, password]):
+        if not all([first_name, last_name, email, username, phone_number, location, profile_picture, expertise, experience_years, password]):
             return {"message": "Missing required fields"}, 400
-
+        
+        if Mechanic.query.filter_by(username=username).first():
+            return {"message": "username already exists"}, 400
+        
         if Mechanic.query.filter_by(email=email).first():
             return {"message": "Email already exists"}, 400
         
@@ -41,11 +45,12 @@ class Mechanics(Resource):
             first_name=first_name,
             last_name=last_name,
             email=email,
+            username=username,
             phone_number=phone_number,
             location=location,
             profile_picture=profile_picture,
             expertise=expertise,
-            rating=rating,
+            experience_years=experience_years,
             bio=bio,
             password=hashed_password
         )
@@ -82,6 +87,8 @@ class MechanicById(Resource):
             mechanic.first_name = data['first_name']
         if 'last_name' in data:
             mechanic.last_name = data['last_name']
+        if 'username' in data:
+            mechanic.username = data['username']
         if 'email' in data:
             mechanic.email = data['email']
         if 'phone_number' in data:
@@ -92,8 +99,8 @@ class MechanicById(Resource):
             mechanic.profile_picture = data['profile_picture']
         if 'expertise' in data:
             mechanic.expertise = data['expertise']
-        if 'rating' in data:
-            mechanic.rating = data['rating']
+        if 'experience_years' in data:
+            mechanic.experience_years = data['experience_years']
         if 'bio' in data:
             mechanic.bio = data['bio']
         

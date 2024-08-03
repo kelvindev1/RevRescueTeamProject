@@ -81,10 +81,10 @@ class Mechanic(db.Model, SerializerMixin):
 
     # Relationships
     admin = db.relationship("Admin", back_populates="mechanics")
-    reviews_received = db.relationship("Review", back_populates="mechanic")
+    reviews_received = db.relationship("Review", back_populates="mechanic", cascade="all, delete-orphan")
     location = db.relationship("Location", back_populates="mechanics")
-    services = db.relationship('Service', back_populates='mechanic')
-    payments = db.relationship("Payment", back_populates="mechanic")
+    services = db.relationship('Service', back_populates='mechanic', cascade="all, delete-orphan")
+    payments = db.relationship("Payment", back_populates="mechanic", cascade="all, delete-orphan")
     assistance_requests = db.relationship("AssistanceRequest", back_populates="mechanic", cascade="all, delete-orphan")
     notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_mechanic_id', back_populates='sender_mechanic', cascade="all, delete-orphan")
     notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_mechanic_id', back_populates='receiver_mechanic', cascade="all, delete-orphan")
