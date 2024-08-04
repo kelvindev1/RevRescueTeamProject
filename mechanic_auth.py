@@ -86,9 +86,12 @@ class Register(Resource):
         
         if Mechanic.query.filter_by(username=username).first():
             return {"msg": "Mechanic already exists"}, 400
-        
+
         if Mechanic.query.filter_by(email=email).first():
             return {"msg": "Email already registered"}, 400
+        
+        if Mechanic.query.filter_by(phone_number=phone_number).first():
+            return {"msg": "Phone Number already exists"}, 400
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 

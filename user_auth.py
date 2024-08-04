@@ -1,9 +1,20 @@
 from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token
-from flask import Blueprint, jsonify, make_response
+from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from models import User, db, TokenBlocklist
 from flask_bcrypt import Bcrypt
 from datetime import datetime, timezone
+import os
+from werkzeug.utils import secure_filename
+
+
+
+UPLOAD_FOLDER = 'uploads/profile_pictures'
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 user_auth_bp = Blueprint('user_auth_bp', __name__,url_prefix='/user_auth')
 user_auth_api = Api(user_auth_bp)
@@ -33,34 +44,79 @@ register_args.add_argument('last_name', type=str, required=True, help='Last name
 register_args.add_argument('username', type=str, required=True, help='Username is required')
 register_args.add_argument('email', type=str, required=True, help='Email is required')
 register_args.add_argument('phone_number', type=str, required=True, help='Phone number is required')
-register_args.add_argument("profile_picture")
 register_args.add_argument("car_info", type=str, required=True, help='Car Info is required')
 register_args.add_argument('password', type=str, required=True, help='Password is required')
 register_args.add_argument('password2', type=str, required=True, help='Confirm password is required')
 
+
 class Register(Resource):
     def post(self):
-        data = register_args.parse_args()
-        if data.get('password') != data.get('password2'):
-            return {"msg": "Passwords don't Match"}
-        
-        if User.query.filter_by(username=data.get('username')).first():
-            return {"msg": "Username already exists"}
-        
-        if User.query.filter_by(email=data.get('email')).first():
-            return {"msg": "Email already registered"}
-        
-        hashed_password = bcrypt.generate_password_hash(data.get('password'))
 
-        new_user = User(first_name=data.get('first_name'), lastname=data.get('last_name'), username=data.get('username'), 
-        email=data.get('email'), phone_number=data.get("phone_number"), profile_picture=data.get("profile_picture"), 
-        car_info=data.get("car_info"), password = hashed_password)
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
 
-        db.session.add(new_user)
-        db.session.commit()
+        if 'profile_picture' not in request.files:
+            return {"msg": "No file part"}, 400
 
-        return {'msg': "User registration Successful"}
+        file = request.files['profile_picture']
+        
+        if file.filename == '':
+            return {"msg": "No selected file"}, 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
+        else:
+            return {"msg": "File type not allowed"}, 400
+        
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        username = request.form.get('username')
+        email = request.form.get('email')
+        phone_number = request.form.get('phone_number')
+        car_info = request.form.get('car_info')
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
+
+
+        if password != password2:
+            return {"msg": "Passwords don't match"}, 400
+        
+        if User.query.filter_by(username=username).first():
+            return {"msg": "User already exists"}, 400
+        
+        if User.query.filter_by(email=email).first():
+            return {"msg": "Email already registered"}, 400
+
+        if User.query.filter_by(phone_number=phone_number).first():
+            return {"msg": "Phone Number already exists"}, 400
+
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        new_user = User(
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            email=email,
+            phone_number=phone_number,
+            car_info=car_info,
+            profile_picture=filename,
+            password=hashed_password
+        )
+
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            return {'msg': "User registration Successful"}
+        
+        except Exception as e:
+            db.session.rollback()
+            return {"msg": "Error creating User", "error": str(e)}, 500
+        
+
 user_auth_api.add_resource(Register, '/register')
+
 
 
 
@@ -113,7 +169,3 @@ class Logout(Resource):
         return response
     
 user_auth_api.add_resource(Logout,'/logout')
-
-
-
-

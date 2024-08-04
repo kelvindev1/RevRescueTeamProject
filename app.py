@@ -1,9 +1,7 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_migrate import Migrate
 from flask_restful import Api
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
-from flask_bcrypt import Bcrypt
 from models import db
 from user import user_bp
 from mechanic import mechanic_bp
@@ -18,12 +16,17 @@ from notification import notification_bp
 from user_auth import user_auth_bp, jwt, bcrypt
 from admin_auth import admin_auth_bp, jwt, bcrypt
 from mechanic_auth import mechanic_auth_bp, jwt, bcrypt
-from datetime import timedelta, datetime
-
+from datetime import timedelta
 
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
+
+
+
+UPLOAD_FOLDER = 'uploads/profile_pictures'
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
@@ -33,9 +36,16 @@ app.config['SECRET_KEY'] = '18895d3dd34344728f4365a92988db5a'
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=20)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=15)
 app.json.compact = False
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 migrate = Migrate(app, db)
+db.init_app(app)
+jwt.init_app(app)
+bcrypt.init_app(app)
 
 
 
@@ -56,17 +66,13 @@ app.register_blueprint(mechanic_auth_bp)
 
 
 
-db.init_app(app)
-jwt.init_app(app)
-bcrypt.init_app(app)
-
-
-
 @app.route('/')
 def index():
     return f'Welcome to phase 5 Project'
 
-
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run(port='5555', debug=True)

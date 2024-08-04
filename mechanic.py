@@ -9,23 +9,27 @@ import os
 UPLOAD_FOLDER = 'uploads/profile_pictures'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
 
 mechanic_bp = Blueprint('mechanic_bp', __name__, url_prefix='/mechanics')
 mechanic_api = Api(mechanic_bp)
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 
 class Mechanics(Resource):
     def get(self):
         mechanics = [mechanic.to_dict() for mechanic in Mechanic.query.all()]
-        return mechanics, 200
+        for mechanic in mechanics:
+            if mechanic['profile_picture']:
+                mechanic['profile_picture'] = f"http://127.0.0.1:5555/uploads/{mechanic['profile_picture']}"
+        return make_response(mechanics, 200)
     
     def post(self):
-        data = request.get_json()
+        data = request.form.to_dict()
+        file = request.files.get('profile_picture')
 
         first_name = data.get('first_name')
         last_name = data.get('last_name')
@@ -39,10 +43,9 @@ class Mechanics(Resource):
         password = data.get('password')
 
 
-        if 'profile_picture' not in request.files:
+        if not file:
             return {"message": "Profile picture is required"}, 400
         
-        file = request.files['profile_picture']
         if file.filename == '':
             return {"message": "No selected file"}, 400
         
@@ -61,7 +64,7 @@ class Mechanics(Resource):
             return {"message": "username already exists"}, 400
         
         if Mechanic.query.filter_by(email=email).first():
-            return {"message": "Email already exists"}, 400
+            return {"message": "Email already registered"}, 400
         
         if Mechanic.query.filter_by(phone_number=phone_number).first():
             return {"message": "Phone number already exists"}, 400
@@ -86,6 +89,7 @@ class Mechanics(Resource):
             db.session.add(new_mechanic)
             db.session.commit()
             mechanic_dict = new_mechanic.to_dict()
+            mechanic_dict['profile_picture'] = f"http://127.0.0.1:5555/uploads/{mechanic_dict['profile_picture']}"
             response = make_response(mechanic_dict, 201)
             return response
         
@@ -103,7 +107,11 @@ class MechanicById(Resource):
 
         if not mechanic:
             return {"message": "Mechanic not found"}, 404
-        return mechanic.to_dict(), 200
+        
+        mechanic_dict = mechanic.to_dict()
+        if mechanic_dict['profile_picture']:
+            mechanic_dict['profile_picture'] = f"http://127.0.0.1:5555/uploads/{mechanic_dict['profile_picture']}"
+        return mechanic_dict, 200
     
     # def patch(self, id):
     #     mechanic = Mechanic.query.get(id)
@@ -142,6 +150,7 @@ class MechanicById(Resource):
 
 
     def patch(self, id):
+
         mechanic = Mechanic.query.get(id)
         if not mechanic:
             return {"message": "Mechanic not found"}, 404
@@ -161,7 +170,11 @@ class MechanicById(Resource):
         
         try:
             db.session.commit()
-            return mechanic.to_dict(), 200
+            mechanic_dict = mechanic.to_dict()
+            if mechanic_dict['profile_picture']:
+                mechanic_dict['profile_picture'] = f"http://127.0.0.1:5555/uploads/{mechanic_dict['profile_picture']}"
+            return mechanic_dict, 200
+        
         except Exception as e:
             db.session.rollback()
             return {"message": "Error updating Mechanic", "error": str(e)}, 500
