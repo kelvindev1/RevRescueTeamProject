@@ -1,4 +1,4 @@
-from models import db, Commission, Payment  # Ensure Payment is imported
+from models import db, Commission, Payment
 from flask import Blueprint, make_response, request
 from flask_restful import Api, Resource
 
@@ -16,15 +16,12 @@ class Commissions(Resource):
         amount = data.get('amount')
         payment_id = data.get('payment_id')
 
-        # Validate required fields
         if amount is None or payment_id is None:
             return {"message": "Missing required fields"}, 400
 
-        # Validate payment_id
         if not Payment.query.get(payment_id):
             return {"message": "Payment with given ID does not exist"}, 400
 
-        # Create a new Commission
         new_commission = Commission(
             amount=amount,
             payment_id=payment_id
@@ -77,7 +74,6 @@ class CommissionById(Resource):
         if 'amount' in data:
             commission.amount = data['amount']
         if 'payment_id' in data:
-            # Validate payment_id
             if not Payment.query.get(data['payment_id']):
                 return {"message": "Payment with given ID does not exist"}, 400
             commission.payment_id = data['payment_id']

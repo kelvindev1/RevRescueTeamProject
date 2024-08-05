@@ -1,6 +1,6 @@
 from flask import Blueprint, make_response, request
 from flask_restful import Api, Resource
-from models import db, Notification, User, Mechanic, AssistanceRequest  # Added AssistanceRequest import
+from models import db, Notification, User, Mechanic, AssistanceRequest
 
 notification_bp = Blueprint('notification_bp', __name__, url_prefix='/notifications')
 notification_api = Api(notification_bp)

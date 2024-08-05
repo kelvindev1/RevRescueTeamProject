@@ -1,14 +1,27 @@
 from flask import Blueprint, request, make_response
 from flask_restful import Resource, Api
-from models import Service, db
+from models import Service, db, Mechanic
 
 service_bp = Blueprint('service_bp', __name__, url_prefix='/services')
 service_api = Api(service_bp)
 
 class Services(Resource):
     def get(self):
-        services = [service.to_dict() for service in Service.query.all()]
-        return make_response(services, 200)
+        services = Service.query.all()
+        response_data = []
+        
+        for service in services:
+            service_data = service.to_dict()
+            mechanic = Mechanic.query.filter_by(id=service.mechanic_id).first()
+            if mechanic:
+                service_data['mechanic'] = {
+                    'first_name': mechanic.first_name,
+                    'last_name': mechanic.last_name,
+                    'profile_picture': mechanic.profile_picture
+                }
+            response_data.append(service_data)
+
+        return make_response(response_data, 200)
     
     def post(self):
         data = request.get_json()
@@ -32,11 +45,22 @@ class Services(Resource):
             db.session.add(new_service)
             db.session.commit()
             service_dict = new_service.to_dict()
+            mechanic = Mechanic.query.filter_by(id=mechanic_id).first()
+            if mechanic:
+                service_dict['mechanic'] = {
+                    'first_name': mechanic.first_name,
+                    'last_name': mechanic.last_name,
+                    'profile_picture': mechanic.profile_picture
+                }
             return make_response({"service": service_dict}, 201)
             
         except Exception as e:
             db.session.rollback()
             return make_response({"message": "Error creating service", "error": str(e)}, 500)
+        
+service_api.add_resource(Services, '/', strict_slashes=False)
+
+
 
 class ServiceById(Resource):
     def get(self, id):
@@ -45,7 +69,16 @@ class ServiceById(Resource):
         if not service:
             return make_response({"message": "Service not found"}, 404)
 
-        return make_response(service.to_dict(), 200)
+        service_data = service.to_dict()
+        mechanic = Mechanic.query.filter_by(id=service.mechanic_id).first()
+        if mechanic:
+            service_data['mechanic'] = {
+                'first_name': mechanic.first_name,
+                'last_name': mechanic.last_name,
+                'profile_picture': mechanic.profile_picture
+            }
+
+        return make_response(service_data, 200)
 
     def patch(self, id):
         data = request.get_json()
@@ -65,13 +98,20 @@ class ServiceById(Resource):
 
         try:
             db.session.commit()
-            return make_response({"service": service.to_dict()}, 200)
+            mechanic = Mechanic.query.filter_by(id=service.mechanic_id).first()
+            service_data = service.to_dict()
+            if mechanic:
+                service_data['mechanic'] = {
+                    'first_name': mechanic.first_name,
+                    'last_name': mechanic.last_name,
+                    'profile_picture': mechanic.profile_picture
+                }
+            return make_response({"service": service_data}, 200)
         except Exception as e:
             db.session.rollback()
             return make_response({"message": "Error updating service", "error": str(e)}, 500)
 
     def delete(self, id):
-        # Delete a service by ID
         service = Service.query.filter(Service.id == id).first()
         
         if not service:
@@ -85,6 +125,4 @@ class ServiceById(Resource):
             db.session.rollback()
             return make_response({"message": "Error deleting service", "error": str(e)}, 500)
 
-# Register the resources with the API
-service_api.add_resource(Services, '/', strict_slashes=False)
 service_api.add_resource(ServiceById, '/<int:id>', strict_slashes=False)
