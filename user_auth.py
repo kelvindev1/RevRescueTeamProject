@@ -131,10 +131,10 @@ class Login(Resource):
         user = User.query.filter_by(email=data.get('email')).first()
         
         if not user:
-            return {"msg": "User does not Exist"}
+            return {"msg": "User does not Exist"}, 404
         
         if not bcrypt.check_password_hash(user.password, data.get('password')):
-            return {"msg": "Incorrect Password"}
+            return {"msg": "Incorrect Password"}, 401
         
         access_token = create_access_token(identity=user.id)
         refresh_token = create_refresh_token(identity=user.id)

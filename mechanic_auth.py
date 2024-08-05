@@ -129,13 +129,13 @@ login_args.add_argument('password', type=str, required=True, help='Password is r
 class Login(Resource):
     def post(self):
         data = login_args.parse_args()
-
         mechanic = Mechanic.query.filter_by(email=data.get('email')).first()
+        
         if not mechanic:
-            return {"msg": "Mechanic does not Exist"}
+            return {"msg": "Mechanic does not Exist"}, 404
         
         if not bcrypt.check_password_hash(mechanic.password, data.get('password')):
-            return {"msg": "Incorrect Password"}
+            return {"msg": "Incorrect Password"}, 401
         
         access_token = create_access_token(identity=mechanic.id)
         refresh_token = create_refresh_token(identity=mechanic.id)
