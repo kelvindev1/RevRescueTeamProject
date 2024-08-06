@@ -13,8 +13,8 @@ class Reviews(Resource):
     def post(self):
         data = request.get_json()
 
-        if not data or not data.get('rating') or not data.get('mechanic_id') or not data.get('user_id'):
-            return {"message": "Required fields: rating, mechanic_id, user_id"}, 400
+        if not data or not data.get('feedback') or not data.get('rating') or not data.get('mechanic_id') or not data.get('user_id'):
+            return {"message": "Required fields: feedback, rating, mechanic_id, user_id"}, 400
 
         mechanic = Mechanic.query.get(data['mechanic_id'])
         user = User.query.get(data['user_id'])
@@ -24,7 +24,7 @@ class Reviews(Resource):
 
         new_review = Review(
             rating=data['rating'],
-            feedback=data.get('comment', ''),
+            feedback=data.get('feedback'),
             mechanic_id=data['mechanic_id'],
             user_id=data['user_id']
         )
@@ -32,10 +32,14 @@ class Reviews(Resource):
         try:
             db.session.add(new_review)
             db.session.commit()
-            return new_review.to_dict(), 201
+            return make_response(new_review.to_dict(), 201)
         except Exception as e:
             db.session.rollback()
             return {"message": "Error creating review", "error": str(e)}, 500
+
+review_api.add_resource(Reviews, '/', strict_slashes=False)
+
+
 
 class ReviewById(Resource):
     def get(self, id):
@@ -52,8 +56,8 @@ class ReviewById(Resource):
         data = request.get_json()
         if 'rating' in data:
             review.rating = data['rating']
-        if 'comment' in data:
-            review.comment = data['comment']
+        if 'feedback' in data:
+            review.feedback = data['feedback']
         try:
             db.session.commit()
             return review.to_dict(), 200
@@ -73,5 +77,4 @@ class ReviewById(Resource):
             db.session.rollback()
             return {"message": "Error deleting review", "error": str(e)}, 500
 
-review_api.add_resource(Reviews, '/', strict_slashes=False)
 review_api.add_resource(ReviewById, '/<int:id>')
