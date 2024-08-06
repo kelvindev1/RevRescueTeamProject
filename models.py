@@ -56,8 +56,6 @@ class User(db.Model, SerializerMixin):
 
 
 
-
-
 # Mechanic interacts with user through assistance requests
 class Mechanic(db.Model, SerializerMixin):
     __tablename__ = 'mechanics'
