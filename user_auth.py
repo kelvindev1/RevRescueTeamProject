@@ -1,22 +1,25 @@
-from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token
 from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
-from models import User, db, TokenBlocklist
+from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token, get_jwt_identity
 from flask_bcrypt import Bcrypt
-from datetime import datetime, timezone
+from models import User, db, TokenBlocklist
+from datetime import datetime, timezone, timedelta
 import os
 from werkzeug.utils import secure_filename
+from sqlalchemy.exc import IntegrityError
+import uuid  
 
 
 
 UPLOAD_FOLDER = 'uploads/profile_pictures'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-user_auth_bp = Blueprint('user_auth_bp', __name__,url_prefix='/user_auth')
+user_auth_bp = Blueprint('user_auth_bp', __name__, url_prefix='/user_auth')
 user_auth_api = Api(user_auth_bp)
 
 bcrypt = Bcrypt()
@@ -51,7 +54,6 @@ register_args.add_argument('password2', type=str, required=True, help='Confirm p
 
 class Register(Resource):
     def post(self):
-
         if not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
 
@@ -63,22 +65,26 @@ class Register(Resource):
         if file.filename == '':
             return {"msg": "No selected file"}, 400
         
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            file.save(file_path)
-        else:
+        if not allowed_file(file.filename):
             return {"msg": "File type not allowed"}, 400
-        
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        username = request.form.get('username')
-        email = request.form.get('email')
-        phone_number = request.form.get('phone_number')
-        car_info = request.form.get('car_info')
-        password = request.form.get('password')
-        password2 = request.form.get('password2')
 
+        if file.content_length > MAX_CONTENT_LENGTH:
+            return {"msg": "File is too large"}, 400
+        
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4().hex}_{filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        file.save(file_path)
+        
+        args = register_args.parse_args()
+        first_name = args['first_name']
+        last_name = args['last_name']
+        username = args['username']
+        email = args['email']
+        phone_number = args['phone_number']
+        car_info = args['car_info']
+        password = args['password']
+        password2 = args['password2']
 
         if password != password2:
             return {"msg": "Passwords don't match"}, 400
@@ -101,20 +107,23 @@ class Register(Resource):
             email=email,
             phone_number=phone_number,
             car_info=car_info,
-            profile_picture=filename,
+            profile_picture=unique_filename,
             password=hashed_password
         )
 
         try:
             db.session.add(new_user)
             db.session.commit()
-            return {'msg': "User registration Successful"}
-        
+            return {'msg': "User registration successful"}, 201
+        except IntegrityError as e:
+            db.session.rollback()
+            if 'unique constraint' in str(e.orig):
+                return {"msg": "User already exists"}, 400
+            return {"msg": "Error creating user", "error": str(e)}, 500
         except Exception as e:
             db.session.rollback()
-            return {"msg": "Error creating User", "error": str(e)}, 500
+            return {"msg": "An error occurred", "error": str(e)}, 500
         
-
 user_auth_api.add_resource(Register, '/register')
 
 
@@ -136,16 +145,30 @@ class Login(Resource):
         if not bcrypt.check_password_hash(user.password, data.get('password')):
             return {"msg": "Incorrect Password"}, 401
         
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=user.id, expires_delta=timedelta(minutes=15))
         refresh_token = create_refresh_token(identity=user.id)
 
-        response = make_response({"msg": "Login successful"})
+
+        response_data = {
+            "msg": "Login successful",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "profile_picture": user.profile_picture,
+                "car_info": user.car_info
+            }
+        }
+        response = make_response(jsonify(response_data))
+
         response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Lax')
         response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Lax')
 
         return response
     
-    @jwt_required(refresh = True)
+    @jwt_required(refresh=True)
     def get(self):
         token = create_access_token(identity=current_user.id)
         return {"token": token}
@@ -169,3 +192,41 @@ class Logout(Resource):
         return response
     
 user_auth_api.add_resource(Logout,'/logout')
+
+
+class CurrentUserResource(Resource):
+    @jwt_required()
+    def get(self):
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+
+        if user:
+            return {
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "username": user.username,
+                "email": user.email,
+                "profile_picture": user.profile_picture,
+                "car_info": user.car_info,
+            }
+        else:
+            return {"msg": "User not found"}, 404
+
+user_auth_api.add_resource(CurrentUserResource, '/current_user')
+
+class PasswordReset(Resource):
+    reset_args = reqparse.RequestParser()
+    reset_args.add_argument('email', type=str, required=True, help='Email is required')
+
+    def post(self):
+        data = self.reset_args.parse_args()
+        user = User.query.filter_by(email=data.get('email')).first()
+
+        if not user:
+            return {"msg": "User not found"}, 404
+        
+        reset_token = create_access_token(identity=user.id, expires_delta=timedelta(hours=1))
+        return {"msg": "Password reset link sent", "reset_token": reset_token}, 200
+
+user_auth_api.add_resource(PasswordReset, '/password_reset')

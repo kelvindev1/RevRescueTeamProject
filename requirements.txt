@@ -10,3 +10,5 @@ flask-bcrypt
 flask_jwt_extended
 Werkzeug
 flask_socketio
+flask_limiter
+redis
