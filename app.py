@@ -3,6 +3,9 @@ from flask_migrate import Migrate
 from flask_restful import Api
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from redis import Redis
 from models import db
 from user import user_bp
 from mechanic import mechanic_bp
@@ -66,6 +69,14 @@ app.register_blueprint(admin_auth_bp)
 app.register_blueprint(mechanic_auth_bp)
 
 
+redis_store = Redis(host='localhost', port=6379)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri="redis://localhost:6379",
+    app=app,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 
 @app.route('/')
@@ -94,8 +105,7 @@ def on_leave(data):
 def handle_message(data):  
     emit('message_response', {'msg': data['msg']}, room=data['assistanceRequestId'])
 
-
-
-
 if __name__ == '__main__':
     socketio.run(app, port=5555, debug=True)
+
+# redis-server
