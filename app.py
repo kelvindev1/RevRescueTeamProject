@@ -2,6 +2,7 @@ from flask import Flask, send_from_directory
 from flask_migrate import Migrate
 from flask_restful import Api
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from models import db
 from user import user_bp
 from mechanic import mechanic_bp
@@ -44,10 +45,11 @@ def allowed_file(filename):
 
 migrate = Migrate(app, db)
 db.init_app(app)
+
 jwt.init_app(app)
 bcrypt.init_app(app)
 
-
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 app.register_blueprint(user_bp)
 app.register_blueprint(mechanic_bp)
@@ -74,5 +76,26 @@ def index():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+
+
+@socketio.on('join')  
+def on_join(data):  
+    room = data['assistanceRequestId']  
+    join_room(room)  
+    emit('status', {'msg': f'User has entered the room: {room}'}, room=room)  
+
+@socketio.on('leave')  
+def on_leave(data):  
+    room = data['assistanceRequestId']  
+    leave_room(room)  
+    emit('status', {'msg': f'User has left the room: {room}'}, room=room)  
+
+@socketio.on('message')  
+def handle_message(data):  
+    emit('message_response', {'msg': data['msg']}, room=data['assistanceRequestId'])
+
+
+
+
 if __name__ == '__main__':
-    app.run(port='5555', debug=True)
+    socketio.run(app, port=5555, debug=True)

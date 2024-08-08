@@ -21,11 +21,22 @@ def allowed_file(filename):
 
 class Users(Resource):
     def get(self):
-        users = [user.to_dict() for user in User.query.all()]
-        for user in users:
-            if user['profile_picture']:
+        search_query = request.args.get('search', '').lower()
+        if search_query:
+            users = User.query.filter(
+                (User.username.ilike(f"%{search_query}%")) |
+                (User.email.ilike(f"%{search_query}%"))
+            ).all()
+        else:
+            users = User.query.all()
+            
+        user_list = [user.to_dict() for user in users]
+        for user in user_list:
+            if user.get('profile_picture'):
                 user['profile_picture'] = f"http://127.0.0.1:5555/uploads/{user['profile_picture']}"
-        return make_response(users, 200)
+        
+        return make_response(user_list, 200)
+    
     
     def post(self):
         data = request.form.to_dict()

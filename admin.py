@@ -8,8 +8,18 @@ admin_api = Api(admin_bp)
 
 class Admin(Resource):
     def get(self):
-        admins = [admin.to_dict() for admin in AdminModel.query.all()]
-        return make_response(admins, 200)
+        search_query = request.args.get('search', '').lower()
+
+        if search_query:
+            admins = AdminModel.query.filter(
+                (AdminModel.email.ilike(f"%{search_query}%")) |
+                (AdminModel.username.ilike(f"%{search_query}%"))
+            ).all()
+        else:
+            admins = AdminModel.query.all()
+            
+        admins_list = [admin.to_dict() for admin in admins]
+        return make_response(admins_list, 200)
 
     def post(self):
         data = request.get_json()

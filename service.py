@@ -7,7 +7,13 @@ service_api = Api(service_bp)
 
 class Services(Resource):
     def get(self):
-        services = Service.query.all()
+        search_query = request.args.get('search', '').lower()
+        services = Service.query.join(Mechanic).filter(
+            (Service.name.ilike(f"%{search_query}%")) |
+            (Mechanic.first_name.ilike(f"%{search_query}%")) |
+            (Mechanic.last_name.ilike(f"%{search_query}%"))
+        ).all() if search_query else Service.query.all()
+        
         response_data = []
         
         for service in services:

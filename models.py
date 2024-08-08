@@ -191,8 +191,8 @@ class AssistanceRequest(db.Model, SerializerMixin):
     request_date = db.Column(db.DateTime, default=db.func.current_timestamp())
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     mechanic_id = db.Column(db.Integer, db.ForeignKey('mechanics.id'), nullable=False)
-    message = db.Column(db.Text, nullable=False)
     resolved = db.Column(db.Boolean, default=False)
+    message = db.Column(db.Text, nullable=False)
 
     serialize_rules = ('-user', '-mechanic', '-payments', '-reviews', '-messages')
 
