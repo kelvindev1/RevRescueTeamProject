@@ -1,5 +1,4 @@
 #  pip install -r requirements.txt
-
 flask
 flask_sqlalchemy
 sqlalchemy_serializer
@@ -10,3 +9,4 @@ faker
 flask-bcrypt
 flask_jwt_extended
 Werkzeug
+flask_socketio

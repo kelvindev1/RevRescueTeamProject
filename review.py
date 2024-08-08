@@ -7,8 +7,27 @@ review_api = Api(review_bp)
 
 class Reviews(Resource):
     def get(self):
-        reviews = [review.to_dict() for review in Review.query.all()]
-        return make_response(reviews, 200)
+        search_reviewer = request.args.get('searchReviewer', '').lower()
+        search_mechanic = request.args.get('searchMechanic', '').lower()
+
+        query = Review.query.join(User).join(Mechanic)
+        
+        if search_reviewer:
+            query = query.filter(
+                (User.first_name.ilike(f"%{search_reviewer}%")) |
+                (User.last_name.ilike(f"%{search_reviewer}%"))
+            )
+        
+        if search_mechanic:
+            query = query.filter(
+                (Mechanic.first_name.ilike(f"%{search_mechanic}%")) |
+                (Mechanic.last_name.ilike(f"%{search_mechanic}%"))
+            )
+        
+        reviews = query.all()
+        
+        response_data = [review.to_dict() for review in reviews]
+        return make_response(response_data, 200)
     
     def post(self):
         data = request.get_json()

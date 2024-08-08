@@ -21,11 +21,21 @@ def allowed_file(filename):
 
 class Mechanics(Resource):
     def get(self):
-        mechanics = [mechanic.to_dict() for mechanic in Mechanic.query.all()]
-        for mechanic in mechanics:
-            if mechanic['profile_picture']:
+        search_query = request.args.get('search', '').lower()
+        if search_query:
+            mechanics = Mechanic.query.filter(
+                (Mechanic.username.ilike(f"%{search_query}%")) |
+                (Mechanic.email.ilike(f"%{search_query}%"))
+            ).all()
+        else:
+            mechanics = Mechanic.query.all()
+            
+        mechanic_list = [mechanic.to_dict() for mechanic in mechanics]
+        for mechanic in mechanic_list:
+            if mechanic.get('profile_picture'):
                 mechanic['profile_picture'] = f"http://127.0.0.1:5555/uploads/{mechanic['profile_picture']}"
-        return make_response(mechanics, 200)
+        
+        return make_response(mechanic_list, 200)
     
     def post(self):
         data = request.form.to_dict()
