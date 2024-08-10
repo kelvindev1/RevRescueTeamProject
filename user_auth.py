@@ -1,19 +1,17 @@
+from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token, get_jwt_identity
 from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
-from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token, get_jwt_identity
 from flask_bcrypt import Bcrypt
 from models import User, db, TokenBlocklist
 from datetime import datetime, timezone, timedelta
 import os
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
-import uuid  
 
 
 
 UPLOAD_FOLDER = 'uploads/profile_pictures'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
-MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -65,26 +63,22 @@ class Register(Resource):
         if file.filename == '':
             return {"msg": "No selected file"}, 400
         
-        if not allowed_file(file.filename):
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
+        else:
             return {"msg": "File type not allowed"}, 400
+        
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        username = request.form.get('username')
+        email = request.form.get('email')
+        phone_number = request.form.get('phone_number')
+        car_info = request.form.get('car_info')
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
 
-        if file.content_length > MAX_CONTENT_LENGTH:
-            return {"msg": "File is too large"}, 400
-        
-        filename = secure_filename(file.filename)
-        unique_filename = f"{uuid.uuid4().hex}_{filename}"
-        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-        file.save(file_path)
-        
-        args = register_args.parse_args()
-        first_name = args['first_name']
-        last_name = args['last_name']
-        username = args['username']
-        email = args['email']
-        phone_number = args['phone_number']
-        car_info = args['car_info']
-        password = args['password']
-        password2 = args['password2']
 
         if password != password2:
             return {"msg": "Passwords don't match"}, 400
@@ -107,7 +101,7 @@ class Register(Resource):
             email=email,
             phone_number=phone_number,
             car_info=car_info,
-            profile_picture=unique_filename,
+            profile_picture=filename,
             password=hashed_password
         )
 

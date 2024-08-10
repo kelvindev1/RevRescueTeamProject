@@ -25,7 +25,9 @@ class Mechanics(Resource):
         if search_query:
             mechanics = Mechanic.query.filter(
                 (Mechanic.username.ilike(f"%{search_query}%")) |
-                (Mechanic.email.ilike(f"%{search_query}%"))
+                (Mechanic.email.ilike(f"%{search_query}%")) |
+                (Mechanic.first_name.ilike(f"%{search_query}%")) |
+                (Mechanic.last_name.ilike(f"%{search_query}%"))
             ).all()
         else:
             mechanics = Mechanic.query.all()
