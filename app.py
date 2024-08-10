@@ -1,11 +1,9 @@
 from flask import Flask, send_from_directory
 from flask_migrate import Migrate
-from flask_restful import Api
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from redis import Redis
+# from flask_limiter import Limiter
+# from flask_limiter.util import get_remote_address
+# from redis import Redis
 from models import db
 from user import user_bp
 from mechanic import mechanic_bp
@@ -52,7 +50,6 @@ db.init_app(app)
 jwt.init_app(app)
 bcrypt.init_app(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 app.register_blueprint(user_bp)
 app.register_blueprint(mechanic_bp)
@@ -69,14 +66,14 @@ app.register_blueprint(admin_auth_bp)
 app.register_blueprint(mechanic_auth_bp)
 
 
-redis_store = Redis(host='localhost', port=6379)
+# redis_store = Redis(host='localhost', port=6379)
 
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri="redis://localhost:6379",
-    app=app,
-    default_limits=["200 per day", "50 per hour"]
-)
+# limiter = Limiter(
+#     key_func=get_remote_address,
+#     storage_uri="redis://localhost:6379",
+#     app=app,
+#     default_limits=["200 per day", "50 per hour"]
+# )
 
 
 @app.route('/')
@@ -88,24 +85,7 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
-
-@socketio.on('join')  
-def on_join(data):  
-    room = data['assistanceRequestId']  
-    join_room(room)  
-    emit('status', {'msg': f'User has entered the room: {room}'}, room=room)  
-
-@socketio.on('leave')  
-def on_leave(data):  
-    room = data['assistanceRequestId']  
-    leave_room(room)  
-    emit('status', {'msg': f'User has left the room: {room}'}, room=room)  
-
-@socketio.on('message')  
-def handle_message(data):  
-    emit('message_response', {'msg': data['msg']}, room=data['assistanceRequestId'])
-
 if __name__ == '__main__':
-    socketio.run(app, port=5555, debug=True)
+    app.run(port=5555, debug=True)
 
 # redis-server

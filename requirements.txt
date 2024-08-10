@@ -12,3 +12,5 @@ Werkzeug
 flask_socketio
 flask_limiter
 redis
+twilio
+python-dotenv
