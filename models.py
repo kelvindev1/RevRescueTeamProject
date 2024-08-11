@@ -52,7 +52,8 @@ class User(db.Model, SerializerMixin):
     payments = db.relationship("Payment", back_populates="user", cascade="all, delete-orphan")
     assistance_requests = db.relationship("AssistanceRequest", back_populates="user", cascade="all, delete-orphan")
     notifications_sent = db.relationship('Notification', foreign_keys='Notification.sender_user_id', back_populates='sender_user', cascade="all, delete-orphan")
-    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_user_id', back_populates='receiver_user', cascade="all, delete-orphan") 
+    notifications_received = db.relationship('Notification', foreign_keys='Notification.receiver_user_id', back_populates='receiver_user', cascade="all, delete-orphan")
+    visits = db.relationship('Visit', back_populates='user', cascade="all, delete-orphan")
 
 
 
@@ -230,6 +231,27 @@ class Notification(db.Model, SerializerMixin):
 
 class TokenBlocklist(db.Model):
     __tablename__ = 'token_blocklist'
+    
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String, nullable=False, index=True)
     created_at = db.Column(db.DateTime, nullable=False)
+
+
+class ReportData(db.Model):
+    __tablename__ = 'reportdatas' 
+
+    id = db.Column(db.Integer, primary_key=True)  
+    column1 = db.Column(db.String(100))  
+    column2 = db.Column(db.String(100)) 
+    date_field = db.Column(db.Date)
+
+
+class Visit(db.Model, SerializerMixin):
+    __tablename__ = 'visits'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    count = db.Column(db.Integer, nullable=False, default=0)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    user = db.relationship('User', back_populates='visits')

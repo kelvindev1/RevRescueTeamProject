@@ -2,8 +2,8 @@ from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current
 from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from flask_bcrypt import Bcrypt
-from models import User, db, TokenBlocklist
-from datetime import datetime, timezone, timedelta
+from models import User, db, TokenBlocklist, Visit as VisitModel
+from datetime import datetime, timezone, timedelta, date
 import os
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
@@ -109,11 +109,13 @@ class Register(Resource):
             db.session.add(new_user)
             db.session.commit()
             return {'msg': "User registration successful"}, 201
+        
         except IntegrityError as e:
             db.session.rollback()
             if 'unique constraint' in str(e.orig):
                 return {"msg": "User already exists"}, 400
             return {"msg": "Error creating user", "error": str(e)}, 500
+
         except Exception as e:
             db.session.rollback()
             return {"msg": "An error occurred", "error": str(e)}, 500
@@ -134,14 +136,15 @@ class Login(Resource):
         user = User.query.filter_by(email=data.get('email')).first()
         
         if not user:
+            VisitResource().log_visit()
             return {"msg": "User does not Exist"}, 404
         
         if not bcrypt.check_password_hash(user.password, data.get('password')):
+            VisitResource().log_visit()
             return {"msg": "Incorrect Password"}, 401
         
         access_token = create_access_token(identity=user.id, expires_delta=timedelta(minutes=15))
         refresh_token = create_refresh_token(identity=user.id)
-
 
         response_data = {
             "msg": "Login successful",
@@ -160,6 +163,9 @@ class Login(Resource):
         response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Lax')
         response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Lax')
 
+        #increment the count
+        VisitResource().log_visit()  
+
         return response
     
     @jwt_required(refresh=True)
@@ -168,6 +174,31 @@ class Login(Resource):
         return {"token": token}
 
 user_auth_api.add_resource(Login, '/login')
+
+
+class VisitResource(Resource):
+    def log_visit(self):
+        today = date.today()
+        visit = VisitModel.query.filter_by(date=today).first()
+
+        if visit:
+            visit.count += 1
+        else:
+            visit = VisitModel(date=today, count=1)
+            db.session.add(visit)
+        db.session.commit()
+    
+    def get(self):
+        self.log_visit()
+        today = date.today()
+        visit = VisitModel.query.filter_by(date=today).first()
+
+        return jsonify({
+            "date": str(visit.date),
+            "count": visit.count
+        })
+
+user_auth_api.add_resource(VisitResource, '/api/visits')
 
 
 class Logout(Resource):

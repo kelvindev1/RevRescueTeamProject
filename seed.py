@@ -1,7 +1,7 @@
 from random import randint, choice
 from faker import Faker
 from app import app, db
-from models import Admin, User, Mechanic, Review, Service, Location, Payment, Commission, AssistanceRequest, Notification
+from models import Admin, User, Mechanic, Review, Service, Location, Payment, Commission, AssistanceRequest, Notification, ReportData, Visit
 
 # Initialize Faker and other data
 fake = Faker()
@@ -34,6 +34,8 @@ with app.app_context():
     db.session.query(Commission).delete()
     db.session.query(AssistanceRequest).delete()
     db.session.query(Notification).delete()
+    db.session.query(ReportData).delete()
+    db.session.query(Visit).delete()
     db.session.commit()
 
     print("Creating Locations...")
@@ -134,7 +136,7 @@ with app.app_context():
     payments = [
         Payment(
             amount=round(fake.pyfloat(left_digits=3, right_digits=2, positive=True, min_value=20, max_value=200), 2),
-            status=fake.random_element(elements=("Completed", "Pending", "Failed")),
+            status=choice(["Completed", "Pending", "Failed"]),
             user_id=choice([user.id for user in users]),
             mechanic_id=choice([mechanic.id for mechanic in mechanics]),
             assistance_request_id=choice([request.id for request in assistance_requests])
@@ -168,6 +170,31 @@ with app.app_context():
         for _ in range(20)
     ]
     db.session.add_all(notifications)
+    db.session.commit()
+
+    print("Creating Report Data...")
+    reportdata = [
+        ReportData(
+            column1=fake.name(),
+            column2=fake.email(),
+            date_field=fake.date_this_year()
+        )
+        for _ in range(50)
+    ]
+    db.session.add_all(reportdata)
+    db.session.commit()
+
+    print("Creating Visits...")
+    user_ids = [user.id for user in users]
+    visits = [
+        Visit(
+            date=fake.date_between(start_date='-10d', end_date='today'),
+            count=fake.random_int(min=0, max=20),
+            user_id=choice(user_ids)  # Choose a random user ID from the list
+        )
+        for _ in range(50)
+    ]
+    db.session.add_all(visits)
     db.session.commit()
 
     print("Database populated successfully!")

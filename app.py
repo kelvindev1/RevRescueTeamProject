@@ -1,10 +1,10 @@
-from flask import Flask, send_from_directory, render_template
+from flask import Flask, send_from_directory, render_template, request
 from flask_migrate import Migrate
 from flask_cors import CORS
 # from flask_limiter import Limiter
 # from flask_limiter.util import get_remote_address
 # from redis import Redis
-from models import db
+from models import db, ReportData
 from user import user_bp
 from mechanic import mechanic_bp
 from admin import admin_bp
@@ -18,7 +18,7 @@ from notification import notification_bp
 from user_auth import user_auth_bp, jwt, bcrypt
 from admin_auth import admin_auth_bp, jwt, bcrypt
 from mechanic_auth import mechanic_auth_bp, jwt, bcrypt
-from datetime import timedelta
+from datetime import timedelta, datetime
 from extensions import mail
 from passwordRecovery import bcrypt, userpass_recovery_bp
 
@@ -91,6 +91,10 @@ app.register_blueprint(userpass_recovery_bp)
 # )
 
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/')
 def index():
     return 'Welcome to the phase 5 Project'
@@ -99,9 +103,37 @@ def index():
 def help():
     return render_template('help.html')
 
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+@app.route('/report', methods=['GET', 'POST'])  
+def report():  
+    report_data = []  
+
+    if request.method == 'POST':  
+        start_date = request.form.get('start_date')  
+        end_date = request.form.get('end_date')  
+
+        # Debugging output to check received dates  
+        print("Start Date:", start_date)  
+        print("End Date:", end_date)  
+
+        # Validate the input  
+        if not start_date or not end_date:  
+            return render_template('report.html', error="Start date or end date is missing.")  
+
+        try:  
+            # Parse the dates  
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()  
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()  
+
+            # Query the database for the report data  
+            report_data = ReportData.query.filter(  
+                ReportData.date_field >= start_date,  
+                ReportData.date_field <= end_date  
+            ).all()  
+        except ValueError:  
+            return render_template('report.html', error="Invalid date format. Please use YYYY-MM-DD.")  
+
+    return render_template('report.html', report_data=report_data)
+
 
 
 if __name__ == '__main__':

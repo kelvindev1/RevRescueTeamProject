@@ -1,8 +1,8 @@
-"""all tables updated
+"""adds all models
 
-Revision ID: a6b922d122bc
+Revision ID: 42d51091f3d7
 Revises: 
-Create Date: 2024-08-03 21:19:50.532644
+Create Date: 2024-08-11 14:28:13.006996
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'a6b922d122bc'
+revision = '42d51091f3d7'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -32,6 +32,13 @@ def upgrade():
     sa.Column('address', sa.String(length=255), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('reportdatas',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('column1', sa.String(length=100), nullable=True),
+    sa.Column('column2', sa.String(length=100), nullable=True),
+    sa.Column('date_field', sa.Date(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('token_blocklist',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('jti', sa.String(), nullable=False),
@@ -47,7 +54,7 @@ def upgrade():
     sa.Column('last_name', sa.String(length=50), nullable=False),
     sa.Column('username', sa.String(length=50), nullable=False),
     sa.Column('email', sa.String(length=100), nullable=False),
-    sa.Column('phone_number', sa.String(length=15), nullable=False),
+    sa.Column('phone_number', sa.String(length=10), nullable=False),
     sa.Column('profile_picture', sa.String(length=255), nullable=True),
     sa.Column('expertise', sa.String(length=300), nullable=False),
     sa.Column('experience_years', sa.Integer(), nullable=False),
@@ -70,7 +77,7 @@ def upgrade():
     sa.Column('last_name', sa.String(length=50), nullable=False),
     sa.Column('username', sa.String(length=50), nullable=False),
     sa.Column('email', sa.String(length=100), nullable=False),
-    sa.Column('phone_number', sa.String(length=15), nullable=False),
+    sa.Column('phone_number', sa.String(length=10), nullable=False),
     sa.Column('profile_picture', sa.String(length=255), nullable=True),
     sa.Column('car_info', sa.String(length=300), nullable=False),
     sa.Column('password', sa.String(length=128), nullable=False),
@@ -90,8 +97,8 @@ def upgrade():
     sa.Column('request_date', sa.DateTime(), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('mechanic_id', sa.Integer(), nullable=False),
-    sa.Column('message', sa.Text(), nullable=False),
     sa.Column('resolved', sa.Boolean(), nullable=True),
+    sa.Column('message', sa.Text(), nullable=False),
     sa.ForeignKeyConstraint(['mechanic_id'], ['mechanics.id'], name=op.f('fk_assistance_requests_mechanic_id_mechanics')),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_assistance_requests_user_id_users')),
     sa.PrimaryKeyConstraint('id')
@@ -103,6 +110,14 @@ def upgrade():
     sa.Column('image_url', sa.String(length=255), nullable=False),
     sa.Column('mechanic_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['mechanic_id'], ['mechanics.id'], name=op.f('fk_services_mechanic_id_mechanics')),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('visits',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('date', sa.Date(), nullable=False),
+    sa.Column('count', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_visits_user_id_users')),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('notifications',
@@ -162,6 +177,7 @@ def downgrade():
     op.drop_table('reviews')
     op.drop_table('payments')
     op.drop_table('notifications')
+    op.drop_table('visits')
     op.drop_table('services')
     op.drop_table('assistance_requests')
     op.drop_table('users')
@@ -170,6 +186,7 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_token_blocklist_jti'))
 
     op.drop_table('token_blocklist')
+    op.drop_table('reportdatas')
     op.drop_table('locations')
     op.drop_table('admins')
     # ### end Alembic commands ###
