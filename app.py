@@ -20,7 +20,6 @@ from admin_auth import admin_auth_bp, jwt, bcrypt
 from mechanic_auth import mechanic_auth_bp, jwt, bcrypt
 from datetime import timedelta, datetime
 from extensions import mail
-from passwordRecovery import bcrypt, userpass_recovery_bp
 
 
 
@@ -77,7 +76,6 @@ app.register_blueprint(notification_bp)
 app.register_blueprint(user_auth_bp)
 app.register_blueprint(admin_auth_bp)
 app.register_blueprint(mechanic_auth_bp)
-app.register_blueprint(userpass_recovery_bp)
 
 
 
