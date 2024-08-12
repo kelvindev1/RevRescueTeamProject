@@ -20,6 +20,8 @@ from admin_auth import admin_auth_bp, jwt, bcrypt
 from mechanic_auth import mechanic_auth_bp, jwt, bcrypt
 from datetime import timedelta, datetime
 from extensions import mail
+from passwordRecovery import bcrypt
+from passwordRecovery import userpass_recovery_bp
 
 
 
@@ -58,6 +60,7 @@ def allowed_file(filename):
 
 migrate = Migrate(app, db)
 db.init_app(app)
+mail.init_app(app) 
 
 jwt.init_app(app)
 bcrypt.init_app(app)
@@ -76,6 +79,7 @@ app.register_blueprint(notification_bp)
 app.register_blueprint(user_auth_bp)
 app.register_blueprint(admin_auth_bp)
 app.register_blueprint(mechanic_auth_bp)
+app.register_blueprint(userpass_recovery_bp)
 
 
 
@@ -109,20 +113,16 @@ def report():
         start_date = request.form.get('start_date')  
         end_date = request.form.get('end_date')  
 
-        # Debugging output to check received dates  
         print("Start Date:", start_date)  
         print("End Date:", end_date)  
 
-        # Validate the input  
         if not start_date or not end_date:  
             return render_template('report.html', error="Start date or end date is missing.")  
 
-        try:  
-            # Parse the dates  
+        try:   
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()  
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()  
 
-            # Query the database for the report data  
             report_data = ReportData.query.filter(  
                 ReportData.date_field >= start_date,  
                 ReportData.date_field <= end_date  
