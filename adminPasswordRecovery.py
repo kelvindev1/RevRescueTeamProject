@@ -23,7 +23,7 @@ class AdminPasswordRecovery(Resource):
             recovery_token = create_recovery_token(admin)
 
             subject = 'Password Recovery'
-            body = f"To reset your password, click the link: http://localhost:5173/reset-password/{recovery_token}"
+            body = f"To reset your password, click the link: http://localhost:5173/admin/reset-password/{recovery_token}"
 
             try:
                 send_email(email, subject, body)
