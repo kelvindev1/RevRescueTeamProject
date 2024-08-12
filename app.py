@@ -20,8 +20,9 @@ from admin_auth import admin_auth_bp, jwt, bcrypt
 from mechanic_auth import mechanic_auth_bp, jwt, bcrypt
 from datetime import timedelta, datetime
 from extensions import mail
-from passwordRecovery import bcrypt
-from passwordRecovery import userpass_recovery_bp
+from passwordRecovery import bcrypt, userpass_recovery_bp
+from adminPasswordRecovery import adminpassword_recovery_bp
+from mechanicPasswordRecovery import mechanicpassword_bp
 
 
 
@@ -80,7 +81,8 @@ app.register_blueprint(user_auth_bp)
 app.register_blueprint(admin_auth_bp)
 app.register_blueprint(mechanic_auth_bp)
 app.register_blueprint(userpass_recovery_bp)
-
+app.register_blueprint(adminpassword_recovery_bp)
+app.register_blueprint(mechanicpassword_bp)
 
 
 # redis_store = Redis(host='localhost', port=6379)
