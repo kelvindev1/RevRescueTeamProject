@@ -23,11 +23,11 @@ class MechanicPasswordRecovery(Resource):
             recovery_token = create_recovery_token(mechanic)
 
             subject = 'Password Recovery'
-            body = f"To reset your password, click the link: http://localhost:5173/reset-password/{recovery_token}"
+            body = f"To reset your password, click the link: http://localhost:5173/mechanic/reset-password/{recovery_token}"
 
             try:
                 send_email(email, subject, body)
-                return make_response({'message': 'Reset Email Sent'}, 200)
+                return make_response({'message': 'Email Sent'}, 200)
             except Exception as e:
                 return make_response({'message': 'Failed to send email', 'error': str(e)}, 500)
         else:
