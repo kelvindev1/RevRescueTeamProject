@@ -29,7 +29,7 @@ class UserPasswordRecovery(Resource):
 
             try:
                 send_email(email, subject, body)
-                return make_response({'message': 'Recovery email sent successfully'}, 200)
+                return make_response({'message': 'Reset Email Sent'}, 200)
             except Exception as e:
                 return make_response({'message': 'Failed to send email', 'error': str(e)}, 500)
         else:
@@ -56,7 +56,7 @@ class UserResetPassword(Resource):
         new_password = data.get('new_password')
 
         if not recovery_token or not new_password:
-            return make_response({'message': 'Missing recovery token or new password'}, 400)
+            return make_response({'message': 'Missing New Password'}, 400)
 
         s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'], salt='password-recovery-salt')
 
@@ -74,7 +74,7 @@ class UserResetPassword(Resource):
             user.password = hashed_password
             db.session.commit()
 
-            return make_response({'message': 'Password reset successfully'}, 200)
+            return make_response({'message': 'Password Reset Successful'}, 200)
         else:
             return make_response({'message': 'User not found'}, 404)
         
