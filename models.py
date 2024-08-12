@@ -43,7 +43,7 @@ class User(db.Model, SerializerMixin):
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id'))
     admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
 
-    serialize_rules = ('-admin', '-reviews_written', '-location', '-payments', '-assistance_requests', '-notifications_sent', '-notifications_received')
+    serialize_rules = ('-admin', '-reviews_written', '-location', '-payments', '-assistance_requests', '-notifications_sent', '-notifications_received', '-visits')
 
     # Relationships
     admin = db.relationship("Admin", back_populates="users")
@@ -229,6 +229,23 @@ class Notification(db.Model, SerializerMixin):
 
 
 
+class Visit(db.Model, SerializerMixin):
+    __tablename__ = 'visits'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    count = db.Column(db.Integer, nullable=False, default=0)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+
+    serialize_rules =('-user',)
+
+
+    #Relationships
+    user = db.relationship('User', back_populates='visits')
+
+
+
 class TokenBlocklist(db.Model):
     __tablename__ = 'token_blocklist'
     
@@ -245,13 +262,3 @@ class ReportData(db.Model):
     column2 = db.Column(db.String(100)) 
     date_field = db.Column(db.Date)
 
-
-class Visit(db.Model, SerializerMixin):
-    __tablename__ = 'visits'
-
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-    count = db.Column(db.Integer, nullable=False, default=0)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-
-    user = db.relationship('User', back_populates='visits')
