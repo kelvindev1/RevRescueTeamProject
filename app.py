@@ -103,10 +103,6 @@ def uploaded_file(filename):
 def index():
     return 'Welcome to the phase 5 Project'
 
-@app.route('/help')
-def help():
-    return render_template('help.html')
-
 @app.route('/report', methods=['GET', 'POST'])  
 def report():  
     report_data = []  
