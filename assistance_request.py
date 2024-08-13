@@ -118,3 +118,21 @@ class AssistanceRequestById(Resource):
             return {"message": "Error deleting user", "error": str(e)}, 500
         
 assistance_request_api.add_resource(AssistanceRequestById, '/<int:id>')
+
+
+
+class AssistanceRequestsByUser(Resource):
+    def get(self):
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return {"message": "User ID is required"}, 400
+
+        assistancerequests = AssistanceRequest.query.filter_by(user_id=user_id).all()
+        
+        if not assistancerequests:
+            return {"message": "No assistance requests found for this user."}, 404
+        
+        response = [req.to_dict() for req in assistancerequests]
+        return response, 200
+    
+assistance_request_api.add_resource(AssistanceRequestsByUser, '/by_user')
