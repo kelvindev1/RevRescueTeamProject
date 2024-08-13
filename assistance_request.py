@@ -20,6 +20,7 @@ class AssistanceRequests(Resource):
     def get(self):
         assistancerequests = [assistancerequest.to_dict() for assistancerequest in AssistanceRequest.query.all()]
         return make_response(assistancerequests, 200)
+    
 
     def post(self):
         data = request.get_json()
@@ -53,7 +54,8 @@ class AssistanceRequests(Resource):
             db.session.commit()
 
             client = get_twilio_client()
-            client.messages.create(
+
+            message = client.messages.create(
                 body=f"A new assistance request has been made: {message}",
                 from_=os.getenv('TWILIO_PHONE_NUMBER'),
                 to=mechanic.phone_number
@@ -66,9 +68,8 @@ class AssistanceRequests(Resource):
             db.session.rollback()
             return {"message": "Error creating assistance request", "error": str(e)}, 500
 
+
 assistance_request_api.add_resource(AssistanceRequests, '/', strict_slashes=False)
-
-
 
 
 
