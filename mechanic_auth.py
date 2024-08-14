@@ -1,5 +1,5 @@
 from flask_jwt_extended import (
-    JWTManager, get_jwt, create_access_token, current_user,
+    JWTManager, get_jwt, create_access_token,
     jwt_required, create_refresh_token, get_jwt_identity
 )
 from flask import Blueprint, jsonify, make_response, request
@@ -23,11 +23,13 @@ mechanic_auth_api = Api(mechanic_auth_bp)
 bcrypt = Bcrypt()
 jwt = JWTManager()
 
+
 # JWT user lookup
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data['sub']
     return Mechanic.query.filter_by(id=identity).first()
+
 
 # JWT token blocklist check
 @jwt.token_in_blocklist_loader
@@ -35,6 +37,7 @@ def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
     jti = jwt_payload['jti']
     token = TokenBlocklist.query.filter_by(jti=jti).first()
     return token is not None
+
 
 # Registration arguments parser
 register_args = reqparse.RequestParser()
@@ -51,8 +54,6 @@ register_args.add_argument('password2', type=str, required=True, help='Confirm p
 
 class Register(Resource):
     def post(self):
-        """Handle mechanic registration."""
-        # Create upload folder if it doesn't exist
         if not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
 
@@ -70,8 +71,7 @@ class Register(Resource):
             file.save(file_path)
         else:
             return {"msg": "File type not allowed"}, 400
-        
-        # Get form data
+
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         username = request.form.get('username')
@@ -86,7 +86,6 @@ class Register(Resource):
         if password != password2:
             return {"msg": "Passwords don't match"}, 400
         
-        # Check if mechanic already exists
         if Mechanic.query.filter_by(username=username).first():
             return {"msg": "Mechanic already exists"}, 400
 
@@ -128,7 +127,6 @@ login_args.add_argument('password', type=str, required=True, help='Password is r
 
 class Login(Resource):
     def post(self):
-        """Handle mechanic login."""
         data = login_args.parse_args() 
         mechanic = Mechanic.query.filter_by(email=data.get('email')).first() 
 
@@ -138,7 +136,6 @@ class Login(Resource):
         if not bcrypt.check_password_hash(mechanic.password, data.get('password')): 
             return make_response({"msg": "Password does not match"}, 401)
 
-        # Create JWT tokens
         token = create_access_token(identity=mechanic.id)
         refresh_token = create_refresh_token(identity=mechanic.id)
 
@@ -154,10 +151,8 @@ class Login(Resource):
 
     @jwt_required(refresh=True)
     def get(self):
-        """Refresh access token."""
         current_mechanic_id = get_jwt_identity()  
         token = create_access_token(identity=current_mechanic_id)  
-
         return make_response({"token": token}, 200)
 
 mechanic_auth_api.add_resource(Login, '/login')
@@ -166,22 +161,15 @@ mechanic_auth_api.add_resource(Login, '/login')
 class Logout(Resource):
     @jwt_required()
     def get(self):
-        """Handle mechanic logout by revoking the JWT."""
         jti = get_jwt()["jti"]
         now = datetime.now(timezone.utc)
-
-        
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
         db.session.commit()
-        
-        response = make_response(jsonify(msg="JWT revoked"))
-
-        
-        response.set_cookie("access_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
-        response.set_cookie("refresh_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
-        return response
+        return jsonify(msg="JWT revoked")
     
 mechanic_auth_api.add_resource(Logout, '/logout')
+
+
 
 class CurrentMechanic(Resource):
     @jwt_required()
@@ -200,6 +188,5 @@ class CurrentMechanic(Resource):
             "profile_picture": mechanic.profile_picture
         }, 200)
 
-# Register the CurrentMechanic resource
-mechanic_auth_api.add_resource(CurrentMechanic, '/current-mechanic')
 
+mechanic_auth_api.add_resource(CurrentMechanic, '/current-mechanic')

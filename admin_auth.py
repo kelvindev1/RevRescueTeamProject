@@ -1,5 +1,8 @@
-from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token
-from flask import Blueprint, jsonify, make_response
+from flask_jwt_extended import (
+    JWTManager, get_jwt, create_access_token,
+    jwt_required, create_refresh_token, get_jwt_identity
+)
+from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from models import Admin, db, TokenBlocklist
 from flask_bcrypt import Bcrypt
@@ -12,17 +15,20 @@ bcrypt = Bcrypt()
 jwt = JWTManager()
 
 
+# JWT user lookup
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data['sub']
     return Admin.query.filter_by(id=identity).first()
 
-
+# JWT token blocklist check
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
     jti = jwt_payload['jti']
     token = TokenBlocklist.query.filter_by(jti=jti).first()
     return token is not None
+
+
 
 # signup
 register_args =reqparse.RequestParser()
@@ -69,36 +75,60 @@ class Login(Resource):
         if not bcrypt.check_password_hash(admin.password, data.get('password')):
             return {"msg": "Incorrect Password"}, 401
         
-        access_token = create_access_token(identity=admin.id)
+        token = create_access_token(identity=admin.id)
         refresh_token = create_refresh_token(identity=admin.id)
 
-        response = make_response({"msg": "Login successful"})
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Lax')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Lax')
 
-        return response
+        return make_response({
+           "token": token,
+           "refresh_token": refresh_token,
+           "admin_id": admin.id,
+           "username": admin.username,
+        }, 200)
     
-    @jwt_required(refresh = True)
+    
+    @jwt_required(refresh=True)
     def get(self):
-        token = create_access_token(identity=current_user.id)
-        return {"token": token}
+        """Refresh access token."""
+        current_admin_id = get_jwt_identity()  
+        token = create_access_token(identity=current_admin_id)
+
+        return make_response({"token": token}, 200)
 
 admin_auth_api.add_resource(Login, '/login')
 
 
+
+# logout
 class Logout(Resource):
     @jwt_required()
     def get(self):
         jti = get_jwt()["jti"]
         now = datetime.now(timezone.utc)
-
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
         db.session.commit()
-
-        response = make_response(jsonify(msg="JWT revoked"))
-
-        response.set_cookie("access_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
-        response.set_cookie("refresh_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
-        return response
+        return jsonify(msg="JWT revoked")
 
 admin_auth_api.add_resource(Logout,'/logout')
+
+
+
+
+class CurrentAdmin(Resource):
+    @jwt_required()
+    def get(self):
+        current_admin_id = get_jwt_identity()
+        admin = Admin.query.get(current_admin_id)
+
+        if admin is None:
+            return make_response({"message": "Admin not found"}, 404)
+
+        return make_response({
+            "id": admin.id,
+            "username": admin.first_name,
+            "email": admin.email
+        }, 200)
+
+
+admin_auth_api.add_resource(CurrentAdmin, '/current-admin')
+

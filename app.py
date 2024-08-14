@@ -23,7 +23,6 @@ from extensions import mail
 from passwordRecovery import bcrypt, userpass_recovery_bp
 from adminPasswordRecovery import adminpassword_recovery_bp
 from mechanicPasswordRecovery import mechanicpassword_bp
-# from currentmech import mechanic_auth_bp
 
 
 
@@ -84,7 +83,6 @@ app.register_blueprint(mechanic_auth_bp)
 app.register_blueprint(userpass_recovery_bp)
 app.register_blueprint(adminpassword_recovery_bp)
 app.register_blueprint(mechanicpassword_bp)
-# app.register_blueprint(mechanic_auth_bp )
 
 
 # redis_store = Redis(host='localhost', port=6379)

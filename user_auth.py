@@ -1,4 +1,7 @@
-from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token, get_jwt_identity
+from flask_jwt_extended import (
+    JWTManager, get_jwt, create_access_token,
+    jwt_required, create_refresh_token, get_jwt_identity
+)
 from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from flask_bcrypt import Bcrypt
@@ -110,15 +113,9 @@ class Register(Resource):
             db.session.commit()
             return {'msg': "User registration successful"}, 201
         
-        except IntegrityError as e:
-            db.session.rollback()
-            if 'unique constraint' in str(e.orig):
-                return {"msg": "User already exists"}, 400
-            return {"msg": "Error creating user", "error": str(e)}, 500
-
         except Exception as e:
             db.session.rollback()
-            return {"msg": "An error occurred", "error": str(e)}, 500
+            return {"msg": "Error creating Mechanic", "error": str(e)}, 500
         
 user_auth_api.add_resource(Register, '/register')
 
@@ -133,22 +130,22 @@ login_args.add_argument('password', type=str, required=True, help='Password is r
 class Login(Resource):
     def post(self):
         data = login_args.parse_args()
-        user = User.query.filter_by(email=data.get('email')).first()  # Change Mechanic back to User
+        user = User.query.filter_by(email=data.get('email')).first()
+
         if not user:
-            return {"msg": "User does not exist"}, 404  # Adjust response code for clarity
-        if not bcrypt.check_password_hash(user.password, data.get('password')):
-            return {"msg": "Password does not match"}, 401  # Unauthorized status code
+            return {"msg": "User does not exist"}, 404
         
-        # Create tokens
+        if not bcrypt.check_password_hash(user.password, data.get('password')):
+            return {"msg": "Password does not match"}, 401
+        
+
         token = create_access_token(identity=user.id)
         refresh_token = create_refresh_token(identity=user.id)
 
-        # Prepare response data
         response_data = {
-            "msg": "Login successful",
             "token": token,
             "refresh_token": refresh_token,
-            "user_id": user.id,  # Use user_id instead of mechanic_id
+            "user_id": user.id,
             "user": {
                 "id": user.id,
                 "username": user.username,
@@ -156,18 +153,20 @@ class Login(Resource):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "profile_picture": user.profile_picture,
-                "car_info": user.car_info  # Ensure this attribute exists in your User model
+                "car_info": user.car_info
             }
         }
 
-        return make_response(jsonify(response_data), 200)  # Return response with a success status code
+        return make_response(jsonify(response_data), 200)
 
     @jwt_required(refresh=True)
     def get(self):
-        token = create_access_token(identity=current_user.id)
-        return {"token": token}, 200  # Return with success status code
+        current_user_id = get_jwt_identity()  
+        token = create_access_token(identity=current_user_id)  
+        return make_response({"token": token}, 200)
 
 user_auth_api.add_resource(Login, '/login')
+
 
 
 class VisitResource(Resource):
@@ -195,25 +194,22 @@ class VisitResource(Resource):
 user_auth_api.add_resource(VisitResource, '/api/visits')
 
 
+
+# logout
 class Logout(Resource):
     @jwt_required()
     def get(self):
         jti = get_jwt()["jti"]
         now = datetime.now(timezone.utc)
-
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
         db.session.commit()
-
-        response = make_response(jsonify(msg="JWT revoked"))
-
-        response.set_cookie("access_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
-        response.set_cookie("refresh_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
-        return response
+        return jsonify(msg="JWT revoked")
+    
     
 user_auth_api.add_resource(Logout,'/logout')
 
 
-class CurrentUserResource(Resource):
+class CurrentUser(Resource):
     @jwt_required()
     def get(self):
         user_id = get_jwt_identity()
@@ -232,20 +228,4 @@ class CurrentUserResource(Resource):
         else:
             return {"msg": "User not found"}, 404
 
-user_auth_api.add_resource(CurrentUserResource, '/current_user')
-
-class PasswordReset(Resource):
-    reset_args = reqparse.RequestParser()
-    reset_args.add_argument('email', type=str, required=True, help='Email is required')
-
-    def post(self):
-        data = self.reset_args.parse_args()
-        user = User.query.filter_by(email=data.get('email')).first()
-
-        if not user:
-            return {"msg": "User not found"}, 404
-        
-        reset_token = create_access_token(identity=user.id, expires_delta=timedelta(hours=1))
-        return {"msg": "Password reset link sent", "reset_token": reset_token}, 200
-
-user_auth_api.add_resource(PasswordReset, '/password_reset')
+user_auth_api.add_resource(CurrentUser, '/current_user')
