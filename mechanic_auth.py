@@ -1,4 +1,7 @@
-from flask_jwt_extended import JWTManager, get_jwt, create_access_token, current_user, jwt_required, create_refresh_token
+from flask_jwt_extended import (
+    JWTManager, get_jwt, create_access_token, current_user,
+    jwt_required, create_refresh_token, get_jwt_identity
+)
 from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from models import Mechanic, db, TokenBlocklist
@@ -7,36 +10,33 @@ from datetime import datetime, timezone
 import os
 from werkzeug.utils import secure_filename
 
-
 UPLOAD_FOLDER = 'uploads/profile_pictures'
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 
 def allowed_file(filename):
+    """Check if the uploaded file is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
-mechanic_auth_bp = Blueprint('mechanic_auth_bp', __name__,url_prefix='/mechanic_auth')
+mechanic_auth_bp = Blueprint('mechanic_auth_bp', __name__, url_prefix='/mechanic_auth')
 mechanic_auth_api = Api(mechanic_auth_bp)
 
 bcrypt = Bcrypt()
 jwt = JWTManager()
 
-
+# JWT user lookup
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data['sub']
     return Mechanic.query.filter_by(id=identity).first()
 
-
+# JWT token blocklist check
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
     jti = jwt_payload['jti']
     token = TokenBlocklist.query.filter_by(jti=jti).first()
     return token is not None
 
-
-
-# Register
+# Registration arguments parser
 register_args = reqparse.RequestParser()
 register_args.add_argument('first_name', type=str, required=True, help='First name is required')
 register_args.add_argument('last_name', type=str, required=True, help='Last name is required')
@@ -49,9 +49,10 @@ register_args.add_argument('experience_years', type=int, required=True, help='Ex
 register_args.add_argument('password', type=str, required=True, help='Password is required')
 register_args.add_argument('password2', type=str, required=True, help='Confirm password is required')
 
-
 class Register(Resource):
     def post(self):
+        """Handle mechanic registration."""
+        # Create upload folder if it doesn't exist
         if not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
 
@@ -70,6 +71,7 @@ class Register(Resource):
         else:
             return {"msg": "File type not allowed"}, 400
         
+        # Get form data
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         username = request.form.get('username')
@@ -84,6 +86,7 @@ class Register(Resource):
         if password != password2:
             return {"msg": "Passwords don't match"}, 400
         
+        # Check if mechanic already exists
         if Mechanic.query.filter_by(username=username).first():
             return {"msg": "Mechanic already exists"}, 400
 
@@ -119,56 +122,84 @@ class Register(Resource):
 mechanic_auth_api.add_resource(Register, '/register')
 
 
-
-
-# login
 login_args = reqparse.RequestParser()
 login_args.add_argument('email', type=str, required=True, help='Email is required')
 login_args.add_argument('password', type=str, required=True, help='Password is required')
 
 class Login(Resource):
     def post(self):
-        data = login_args.parse_args()
-        mechanic = Mechanic.query.filter_by(email=data.get('email')).first()
-        
+        """Handle mechanic login."""
+        data = login_args.parse_args() 
+        mechanic = Mechanic.query.filter_by(email=data.get('email')).first() 
+
         if not mechanic:
-            return {"msg": "Mechanic does not Exist"}, 404
-        
-        if not bcrypt.check_password_hash(mechanic.password, data.get('password')):
-            return {"msg": "Incorrect Password"}, 401
-        
-        access_token = create_access_token(identity=mechanic.id)
+            return make_response({"msg": "Mechanic does not exist"}, 404) 
+
+        if not bcrypt.check_password_hash(mechanic.password, data.get('password')): 
+            return make_response({"msg": "Password does not match"}, 401)
+
+        # Create JWT tokens
+        token = create_access_token(identity=mechanic.id)
         refresh_token = create_refresh_token(identity=mechanic.id)
 
-        response = make_response({"msg": "Login successful"})
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Lax')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Lax')
+        return make_response({
+           "token": token,
+           "refresh_token": refresh_token,
+           "mechanic_id": mechanic.id,
+           "first_name": mechanic.first_name,
+           "last_name": mechanic.last_name,
+           "profile_picture": mechanic.profile_picture
+        }, 200)
 
-        return response
-    
-    @jwt_required(refresh = True)
+
+    @jwt_required(refresh=True)
     def get(self):
-        token = create_access_token(identity=current_user.id)
-        return {"token": token}
+        """Refresh access token."""
+        current_mechanic_id = get_jwt_identity()  
+        token = create_access_token(identity=current_mechanic_id)  
+
+        return make_response({"token": token}, 200)
 
 mechanic_auth_api.add_resource(Login, '/login')
 
-
-
-# logout
+# Logout
 class Logout(Resource):
     @jwt_required()
     def get(self):
+        """Handle mechanic logout by revoking the JWT."""
         jti = get_jwt()["jti"]
         now = datetime.now(timezone.utc)
 
+        
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
         db.session.commit()
         
         response = make_response(jsonify(msg="JWT revoked"))
 
+        
         response.set_cookie("access_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
         response.set_cookie("refresh_token", "", expires=0, httponly=True, secure=True, samesite='Lax')
         return response
     
-mechanic_auth_api.add_resource(Logout,'/logout')
+mechanic_auth_api.add_resource(Logout, '/logout')
+
+class CurrentMechanic(Resource):
+    @jwt_required()
+    def get(self):
+        current_mechanic_id = get_jwt_identity()
+        mechanic = Mechanic.query.get(current_mechanic_id)
+
+        if mechanic is None:
+            return make_response({"message": "Mechanic not found"}, 404)
+
+        return make_response({
+            "id": mechanic.id,
+            "first_name": mechanic.first_name,
+            "last_name": mechanic.last_name,
+            "email": mechanic.email,
+            "profile_picture": mechanic.profile_picture
+        }, 200)
+
+# Register the CurrentMechanic resource
+mechanic_auth_api.add_resource(CurrentMechanic, '/current-mechanic')
+

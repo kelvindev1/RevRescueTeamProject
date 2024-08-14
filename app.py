@@ -23,6 +23,7 @@ from extensions import mail
 from passwordRecovery import bcrypt, userpass_recovery_bp
 from adminPasswordRecovery import adminpassword_recovery_bp
 from mechanicPasswordRecovery import mechanicpassword_bp
+# from currentmech import mechanic_auth_bp
 
 
 
@@ -42,7 +43,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # run python then run import uuid then run uuid.uuid4().hex
 app.config['SECRET_KEY'] = '18895d3dd34344728f4365a92988db5a'
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=20)
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=30)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=15)
 app.json.compact = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -83,6 +84,7 @@ app.register_blueprint(mechanic_auth_bp)
 app.register_blueprint(userpass_recovery_bp)
 app.register_blueprint(adminpassword_recovery_bp)
 app.register_blueprint(mechanicpassword_bp)
+# app.register_blueprint(mechanic_auth_bp )
 
 
 # redis_store = Redis(host='localhost', port=6379)

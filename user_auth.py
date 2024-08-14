@@ -133,21 +133,22 @@ login_args.add_argument('password', type=str, required=True, help='Password is r
 class Login(Resource):
     def post(self):
         data = login_args.parse_args()
-        user = User.query.filter_by(email=data.get('email')).first()
-        
+        user = User.query.filter_by(email=data.get('email')).first()  # Change Mechanic back to User
         if not user:
-            VisitResource().log_visit()
-            return {"msg": "User does not Exist"}, 404
-        
+            return {"msg": "User does not exist"}, 404  # Adjust response code for clarity
         if not bcrypt.check_password_hash(user.password, data.get('password')):
-            VisitResource().log_visit()
-            return {"msg": "Incorrect Password"}, 401
+            return {"msg": "Password does not match"}, 401  # Unauthorized status code
         
-        access_token = create_access_token(identity=user.id, expires_delta=timedelta(minutes=15))
+        # Create tokens
+        token = create_access_token(identity=user.id)
         refresh_token = create_refresh_token(identity=user.id)
 
+        # Prepare response data
         response_data = {
             "msg": "Login successful",
+            "token": token,
+            "refresh_token": refresh_token,
+            "user_id": user.id,  # Use user_id instead of mechanic_id
             "user": {
                 "id": user.id,
                 "username": user.username,
@@ -155,23 +156,16 @@ class Login(Resource):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "profile_picture": user.profile_picture,
-                "car_info": user.car_info
+                "car_info": user.car_info  # Ensure this attribute exists in your User model
             }
         }
-        response = make_response(jsonify(response_data))
 
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Lax')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Lax')
+        return make_response(jsonify(response_data), 200)  # Return response with a success status code
 
-        #increment the count
-        VisitResource().log_visit()  
-
-        return response
-    
     @jwt_required(refresh=True)
     def get(self):
         token = create_access_token(identity=current_user.id)
-        return {"token": token}
+        return {"token": token}, 200  # Return with success status code
 
 user_auth_api.add_resource(Login, '/login')
 
