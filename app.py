@@ -85,6 +85,7 @@ app.register_blueprint(adminpassword_recovery_bp)
 app.register_blueprint(mechanicpassword_bp)
 
 
+
 # redis_store = Redis(host='localhost', port=6379)
 
 # limiter = Limiter(

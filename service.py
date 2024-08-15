@@ -6,10 +6,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 service_bp = Blueprint('service_bp', __name__, url_prefix='/services')
 service_api = Api(service_bp)
 
+
+
 class Services(Resource):
     @jwt_required()
     def get(self):
-        """Retrieve a list of services, optionally filtered by search query."""
         current_mechanic_id = get_jwt_identity()
         search_query = request.args.get('search', '').lower()
 
@@ -42,6 +43,8 @@ class Services(Resource):
 
         return make_response(response_data, 200)
     
+
+
     @jwt_required()
     def post(self):
         try:
@@ -153,9 +156,41 @@ class ServiceById(Resource):
         try:
             db.session.delete(service)
             db.session.commit()
-            return make_response({"message": "Service deleted successfully"}, 204)
+            return{}, 204
         except Exception as e:
             db.session.rollback()
             return make_response({"message": "Error deleting service", "error": str(e)}, 500)
 
 service_api.add_resource(ServiceById, '/<int:id>', strict_slashes=False)
+
+
+
+class AllServices(Resource):
+    def get(self):
+        """Retrieve a list of services, optionally filtered by search query."""
+        search_query = request.args.get('search', '').lower()
+        services_query = Service.query.join(Mechanic)
+
+        if search_query:
+            services_query = services_query.filter(
+                (Service.name.ilike(f"%{search_query}%")) |
+                (Mechanic.first_name.ilike(f"%{search_query}%")) |
+                (Mechanic.last_name.ilike(f"%{search_query}%"))
+            )
+
+        services = services_query.all()
+
+        response_data = []
+        for service in services:
+            service_data = service.to_dict()
+            mechanic = Mechanic.query.filter_by(id=service.mechanic_id).first()
+            if mechanic:
+                service_data['mechanic'] = {
+                    'first_name': mechanic.first_name,
+                    'last_name': mechanic.last_name,
+                    'profile_picture': mechanic.profile_picture
+                }
+            response_data.append(service_data)
+
+        return make_response(response_data, 200)
+service_api.add_resource(AllServices, '/all', strict_slashes=False)
